@@ -1,0 +1,30 @@
+lib/DAIA.pm
+lib/DAIA/Availability.pm
+lib/DAIA/Available.pm
+lib/DAIA/Department.pm
+lib/DAIA/Document.pm
+lib/DAIA/Entity.pm
+lib/DAIA/Institution.pm
+lib/DAIA/Item.pm
+lib/DAIA/Limitation.pm
+lib/DAIA/Message.pm
+lib/DAIA/Object.pm
+lib/DAIA/Response.pm
+lib/DAIA/Storage.pm
+lib/DAIA/Unavailable.pm
+
+t/10object.t
+t/20entities.t
+t/30message.t
+t/40availability.t
+t/50item.t
+t/60document.t
+t/70response.t
+
+clients/daia.css  
+clients/daia.xsl
+clients/xmlverbatim.xsl
+
+Makefile.PL
+MANIFEST			This list of files
+META.yml                                 Module meta-data (added by MakeMaker)
