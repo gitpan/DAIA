@@ -2,7 +2,7 @@ package DAIA::Available;
 
 =head1 NAME
 
-DAIA::Unavailable - Information about a service that is currently unavailable
+DAIA::Available - Information about a service that is currently unavailable
 
 =head1 DESCRIPTION
 

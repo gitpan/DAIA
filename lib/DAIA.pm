@@ -7,19 +7,21 @@ DAIA - Document Availability Information API in Perl
 =cut
 
 use strict;
-our $VERSION = '0.20'; # reused for all DAIA packages
+our $VERSION = '0.21'; # reused for all DAIA packages
+use XML::Simple; # only for parsing (may be changed)
 
 =head1 DESCRIPTION
 
 The Document Availability Information API (DAIA) defines a data model with 
 serializations in JSON and XML to encode information about the current 
 availability of documents. See L<http://purl.org/NET/DAIA> for a detailed
-specification - please read it to get to know the meaning of the DAIA
-information objects which are directly mapped to Perl packages.
+specification. This package provides Perl classes and functions to easily
+create and manage DAIA information. It can be used to implement DAIA servers,
+clients, and other programs that handle availability information.
 
-This package provides Perl classes and functions to easily create and manage
-DAIA information. It can be used to implement DAIA servers, clients, and other
-programs that handle availability information.
+The DAIA information objects as decriped in the DAIA specification are
+directly mapped to Perl packages. In addition a couple of functions can
+be exported if you prefer to handle DAIA data without much object-orientation.
 
 =SYNOPSIS
 
@@ -73,7 +75,7 @@ A DAIA server can be implemented the following way:
      $res->message( "en" => "No holding information found for id $id" );
   }
 
-  $res->serve( xslt => "http://path.to/daia.xsl' );
+  $res->serve( xslt => "http://path.to/daia.xsl" );
 
 =cut
 
@@ -101,38 +103,47 @@ $EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
 Exporter::export_tags('all');
 
 # TODO: change carp mode
-use Carp qw(verbose);
+#use Carp qw(verbose);
+use Carp;
 # use Carp::Clan qw(verbose);
 # or: use Carp::Clan qw(^DAIA::)
 
 =head2 EXPORTED FUNCTIONS
 
-If you prefer function calls in favor of constructor calls, this package 
-providesfunctions for each DAIA class constructor. The functions are named 
-by the object that they create but in lowercase - for instance C<response>
-for the L<DAIA::Response> object. The functions can be exported in groups:
+If you prefer function calls in favor of constructor calls, this package  
+providesfunctions for each DAIA class constructor. The functions are named  
+by the object that they create but in lowercase - for instance C<response> 
+for the L<DAIA::Response> object. The functions can be exported in groups. 
+To disable exporting of the functions include DAIA like this: 
+
+  use DAIA qw();      # do not export any functions
+  use DAIA qw(serve); # only export function 'serve'
 
 =over 4
 
 =item :core
 
-C<response> (L<DAIA::Response>),
+Includes the functions C<response> (L<DAIA::Response>),
 C<document> (L<DAIA::Document>), 
 C<item> (L<DAIA::Item>),
 C<available> (L<DAIA::Available>), 
-C<unavailable> (L<DAIA::Unavailable>), 
+C<unavailable> (L<DAIA::Unavailable>), and
 C<availability> (L<DAIA::Availability>)
 
 =item :entities
 
-C<institution> (L<DAIA::Institution>),
+Includes the functions C<institution> (L<DAIA::Institution>),
 C<department> (L<DAIA::department>),
-C<storage> (L<DAIA::Storage>),
+C<storage> (L<DAIA::Storage>), and
 C<limitation> (L<DAIA::Limitation>)
 
 =item message
 
-C<message> (L<DAIA::Message>)
+Includes the function C<message> (L<DAIA::Message>)
+
+=item :all
+
+Includes all functions.
 
 =item serve
 
@@ -163,6 +174,61 @@ sub limitation   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::L
 sub serve {
     local $Carp::CarpLevel = $Carp::CarpLevel + 1; 
     shift->serve( @_ );
+}
+
+=head2 Additional functions
+
+=head3 parse_xml( $xml, [ $xmlns ] )
+
+First sketch of an XML parser based on L<XML::Simple>. 
+There is little validation only. Not exported by default, but
+you can call it as C<DAIA::parse_xml>.
+
+=cut
+
+sub parse_xml {
+    my ($xml, $xmlns) = @_;
+
+    # TODO: namespace support: ignore everything not in the DAIA namespace
+
+    $xml = eval { XMLin( $xml, KeepRoot => 1, NSExpand => $xmlns ); };
+    croak $@ if $@;
+    croak "XML does not contain DATA information" unless $xml;
+
+    my ($root, $value) = %$xml;
+    $root =~ s/{[^}]+}//;
+    $root = ucfirst($root);
+
+    _filter_xml( $value );
+
+    my $object = eval "DAIA::$root->new( \$value )";
+    croak $@ if $@;
+
+    return $object;
+}
+
+# filter out non DAIA XML elements and 'xmlns' attribute
+sub _filter_xml { 
+    my $xml = shift;
+    map { _filter_xml($_) } @$xml if ref($xml) eq 'ARRAY';
+    return unless ref($xml) eq 'HASH';
+
+    my @del = ('xmlns');
+    foreach my $key (keys %$xml) {
+        if ($key =~ /^{([^}]*)}(.*)/) {
+            if ($1 eq "http://ws.gbv.de/daia/") {
+                $xml->{$2} = $xml->{$1};
+            } else {
+                push @del, $key;
+            }
+        }
+    }
+
+    # remove non-daia elements
+    foreach (@del) { delete $xml->{$_}; }
+
+    # recurse
+    map { _filter_xml($xml->{$_}) } keys %$xml;
 }
 
 1;

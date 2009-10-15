@@ -21,7 +21,7 @@ C<interloan>, and C<openaccess> or a custom URI. Additionally you can specify
 some details about the availability.
 
 In general availability is encoded as an object of either L<DAIA::Available>
-(status true) or L<DAIA::Unavailable> (status false). There are several
+(status C<true>) or L<DAIA::Unavailable> (status C<false>). There are several
 equivalent ways to define a given service as available:
 
   available( $service );

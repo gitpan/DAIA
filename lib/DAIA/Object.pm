@@ -10,10 +10,6 @@ use strict;
 use Carp qw(croak confess);
 use Data::Validate::URI qw(is_uri is_web_uri);
 use JSON;
-use XML::Writer;
-use XML::Simple; # XMLOut;
-#use XML::Simple;
-# TODO: XML  Parser ?
 
 our $VERSION = $DAIA::VERSION;
 our $AUTOLOAD;
@@ -118,41 +114,24 @@ sub add {
 
 A DAIA object can be serialized by the following methods:
 
-=head3 xml ( [ %options ] )
+=head3 xml ( [ $xmlns ] )
 
-Returns the object in DAIA/XML. The current implementation
-does not know element order, so it breaks the XML Schema.
+Returns the object in DAIA/XML. If you specify C<xmlns> as parameter, 
+then a namespace declaration is added.
 
 =cut
 
 sub xml {
-    my ($self, %opt) = @_;
+    my ($self, $xmlns) = @_;
 
     my $name = lc(ref($self)); 
     $name =~ s/^daia:://;
     $name = 'daia' if $name eq 'response';
 
-    # TODO: indent parameter?
-    my $xml;
     my $struct = $self->struct;
-
-    if (defined $opt{xmlns}) { # TODO: clarify and document this parameter
-        $struct->{xmlns} = "http://ws.gbv.de/daia/";
-    }
-
-    # TODO: the order of elements is not controlled but the XML Schema wants !
-    # we could use Tie:
-    # For some XML document types you might be able to hack it in by subclassing
-    # XML::Simple and overriding the new_hashref() method to supply a hashref tied to Tie::IxHash.
-
-    $xml = XMLout( $struct, RootName => $name );
-    # alternativ:
-    # rekursiv struct durchlaufen
-    # wenn ref($value) eq 'ARRAY' => mehrere children
-    # wenn ref($value) eq 'HASH' => ein child
-    # sonst: attribute
-    # für response und item: feste reihenfolge, d.h. children sortieren
-    # sonst: @children einfach so (reihenfolge egal)
+    $struct->{xmlns} = "http://ws.gbv.de/daia/" if $xmlns;
+    my $xml = xml_write( $name, $struct, 0 );
+    delete $struct->{xmlns} if $xmlns;
 
     return $xml;
 }
@@ -323,6 +302,76 @@ sub AUTOLOAD {
     #use Data::Dumper; print Dumper($value) . "\n";
 }
 
+=head2 xml_write ( $roottag, $content, $level )
+
+Simple, adopted XML::Simple::XMLOut replacement with support of element order
+
+=cut
+
+sub xml_write {
+    my ($name, $struct, $level) = @_;
+
+    my $indent = ('  ' x $level);
+    my $tag = "$indent<$name";
+
+    my $content = '';
+    if (defined $struct->{content}) {
+        $content = $struct->{content};
+        delete $struct->{content};
+    }
+
+    my @attr = grep { ! ref($struct->{$_}); } keys %$struct;
+    @attr = map { "$_=\"".xml_escape_value($struct->{$_}).'"' } @attr;
+    $tag .= " " . join(" ", @attr) if @attr;
+
+    # get the right order
+    my @order = qw(message institution document label department storage available unavailable);
+    my @children = grep { ref($struct->{$_}) } @order;
+    my %has = map { $_ => 1 } @children;
+    # append additional children
+    push @children, grep { ref($struct->{$_}) and not $has{$_} } keys %$struct;
+
+    my @lines;
+    if (@children) {
+        push @lines, "$tag>";
+        foreach my $k (@children) {
+            $k =~ s/^\d//;
+            if ( ref($struct->{$k}) eq 'HASH' ) {
+                push @lines, xml_write($k, $struct->{$k}, $level+1);
+            } elsif ( ref($struct->{$k}) eq 'ARRAY' ) {
+                foreach my $v (@{$struct->{$k}}) {
+                    push @lines, xml_write($k, $v, $level+1);
+                }
+            }
+        }
+        push @lines, "$indent</$name>";
+    } else {
+        if ( $content ne '' ) {
+          push @lines, "$tag>" . xml_escape_value($content) . "</$name>";
+        } else {
+          push @lines, "$tag />";
+        }
+    }
+    
+    return join("\n", @lines);
+}
+
+=head2 xml_escape_value ( $string )
+
+Escape special XML characters.
+
+=cut
+
+sub xml_escape_value {
+    my($data) = @_;
+    return '' unless defined($data);
+    $data =~ s/&/&amp;/sg;
+    $data =~ s/</&lt;/sg;
+    $data =~ s/>/&gt;/sg;
+    $data =~ s/"/&quot;/sg;
+    return $data;
+}
+
 =head2 _buildargs
 
 Returns a property-value hash of constructor parameters.
@@ -367,45 +416,3 @@ Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at
 your option, any later version of Perl 5 you may have available.
-
-__END__
-
-ELEMENT ORDER:
-
-response:
-!  institution? (element) - information about the institution that grants or knows about services and their availability
-   message* (element) - (error) message(s) about the whole response
-   document*
-      message
-      item
-
-item
-!  label? (element) - a label that helps to identify and/or find the item (signature etc.)
-!  department? (element) - an administrative sub-entitity of the institution that is responsible for this item
-!  storage? (element) - a physical location of the item (stacks, floor etc.)
-   message* (element) - (error) message(s) about the item.
-   available* (element) - information about an available service with the item.
-   unavailabile*
-
-    my $xml = "<$name";
-    my @children;
-    my $content = $self->{content};
-
-    #foreach my $property (keys %$self) {
-    #    if (ref $self->{$property} eq 'ARRAY') { # children
-    #        $struct->{$property} = [ map { $_->struct } @{$self->{$property}} ];
-    #    } elsif ( UNIVERSAL::isa( $self->{$property}, "DAIA::Object" ) ) {
-    #        $struct->{$property} = $self->{$property}->struct;
-    #    } else { # attribute
-    #        $struct->{$property} = $self->{$property};
-    #    }
-    #}
-    # TODO: " " x ($elementLevel * $dataIndent)
-    if ( @children ) {
-        $xml .= ">\n" . join( "\n", @children ) . "</$name>";
-    } elsif ( defined $content ) {
-        # TODO encode content
-        $xml .= $content . "</$name>";
-    } else {
-        $xml .= " />";
-    }

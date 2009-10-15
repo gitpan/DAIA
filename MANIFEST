@@ -20,11 +20,14 @@ t/40availability.t
 t/50item.t
 t/60document.t
 t/70response.t
+t/80xml.t
 
 clients/daia.css  
 clients/daia.xsl
 clients/xmlverbatim.xsl
+clients/daia.xsd
 
 Makefile.PL
+README
 MANIFEST			This list of files
 META.yml                                 Module meta-data (added by MakeMaker)
