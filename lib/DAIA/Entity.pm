@@ -9,7 +9,27 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 use strict;
 use Data::Validate::URI qw(is_uri is_web_uri);
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
+our $VERSION = '0.25';
+
+=head1 PROPERTIES
+
+=over
+
+=item id
+
+A persistent identifier for the entity (optional). Must be an URI (C<xs:anyURI>). 
+
+=item content
+
+A simple name describing the entity. Be default the empty string is used.
+
+=item href
+
+An URL linking to the entity (optional).
+
+=back
+
+=cut
 
 our %PROPERTIES = (
     content => { 
@@ -42,3 +62,4 @@ Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at
 your option, any later version of Perl 5 you may have available.
+

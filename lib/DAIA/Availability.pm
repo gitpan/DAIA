@@ -8,7 +8,7 @@ DAIA::Availability - Abstract base class of availability information
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
+our $VERSION = '0.25';
 use Carp qw(croak);
 use Data::Validate::URI qw(is_uri);
 

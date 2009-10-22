@@ -16,7 +16,7 @@
 
     TODO:
       - i18n of messages
-      - check whether Gesamtstatus is only limited/fragmented
+      - check whether "Gesamtstatus" is only limited/fragmented
 
   -->
   <xsl:import href="xmlverbatim.xsl"/>
@@ -118,9 +118,8 @@
         <h2>Raw XML response (this document)</h2>
         <xsl:apply-templates select="/" mode="xmlverb" />
         <div id="about">
-          DAIA is still early beta! See 
-          <a href="http://www.gbv.de/wikis/cls/DAIA">http://www.gbv.de/wikis/cls/DAIA</a>
-          for more information.
+          See <a href="http://purl.org/NET/DAIA">http://purl.org/NET/DAIA</a>
+          for more information about DAIA.
         </div>
       </body>
     </html>
@@ -133,7 +132,7 @@
     <span>
       <xsl:choose>
         <xsl:when test="$value = 1">
-          <xsl:attribute name="class">status1</xsl:attribute>
+          <xsl:attribute name="class">available</xsl:attribute>
           <xsl:text>&#xA0;</xsl:text>
           <xsl:if test="$legend">verfügbar</xsl:if>
         </xsl:when>
@@ -154,6 +153,9 @@
         </xsl:otherwise>
       </xsl:choose>
     </span>
+    <xsl:if test="@href">
+      <a href="{@href}">LINK</a>
+    </xsl:if>
   </xsl:template>
 
 
@@ -268,11 +270,9 @@
             </xsl:call-template>
         </xsl:otherwise>
       </xsl:choose>
+
       <xsl:if test="d:limitation">(eingeschränkt)</xsl:if>
       <xsl:if test="@queue">[<xsl:value-of select="@queue"/>]</xsl:if>
-      <xsl:if test="@href">
-        <a href="{@href}">LINK</a>
-      </xsl:if>
       <xsl:if test="@expected">
         <div class="time">
           <xsl:value-of select="@expected"/>
@@ -288,13 +288,12 @@
       <xsl:if test="d:limitation">
         <xsl:attribute name="class">limited</xsl:attribute>
       </xsl:if>
+      <!-- TODO: only for known services -->
+      <xsl:attribute name="class"><xsl:value-of select="@service"/></xsl:attribute>
       <xsl:call-template name="status">
         <xsl:with-param name="value" select="1"/>
       </xsl:call-template>
       <xsl:if test="d:limitation">(eingeschränkt)</xsl:if>
-      <xsl:if test="@href">
-        <a href="{@href}">LINK</a>
-      </xsl:if>
       <xsl:if test="@delay">
         <div class="time">
           <xsl:value-of select="@delay"/>

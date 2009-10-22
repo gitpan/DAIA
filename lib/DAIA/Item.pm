@@ -8,7 +8,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>.
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
+our $VERSION = '0.25';
 
 use DAIA;
 use Data::Validate::URI qw(is_uri is_web_uri);
@@ -16,7 +16,7 @@ use JSON;
 
 =head1 PROPERTIES
 
-=over 4
+=over 
 
 =item id
 
@@ -52,9 +52,10 @@ our %PROPERTIES = (
         }
     },
     label       => {
-        default => '',  # in addition this property is filtered if it's the empty string
-        filter => sub { 
-            return "$_[0]";
+        default => '',
+        filter => sub { # label can be specified as array or as element
+            my $v = (ref($_[0]) eq 'ARRAY') ? $_[0]->[0] : $_[0]; 
+            return "$v";
         }
     },
     department  => { type => 'DAIA::Department' },
@@ -65,8 +66,10 @@ our %PROPERTIES = (
 
 =head1 METHODS
 
-DAIA::Item provides the default methods of L<DAIA::Object>, accessor 
-methods for all of its properties and the following appender methods:
+DAIA::Item provides the default methods of L<DAIA::Object> and accessor 
+methods for all of its properties.
+
+=head2 Additional appender methods
 
 =over
 
@@ -106,6 +109,35 @@ sub addAvailability {
 
 *addService = *addAvailability;
 
+=head2 Additional query methods
+
+=head3 services ( [ $list-of-services ] )
+
+Returns a (possibly empty) hash of services mapped to lists
+of L<DAIA::Availability> objects for the given services.
+
+=cut
+
+sub services {
+    my $self = shift;
+
+    my %wanted = map { $_ => 1 }
+                 map { $DAIA::Availability::SECIVRES{$_} ? 
+                       $DAIA::Availability::SECIVRES{$_} : $_ } @_;
+
+    my %services;
+    foreach my $a ( ($self->available, $self->unavailable) ) {
+        my $s = $a->service;
+        next if %wanted and not $wanted{$s};
+        if ( $services{$s} ) {
+            push @{ $services{$s} }, $a;
+        } else {
+            $services{$s} = [ $a ];
+        }
+    }
+
+    return %services;
+}
 
 1;
 

@@ -7,7 +7,8 @@ DAIA - Document Availability Information API in Perl
 =cut
 
 use strict;
-our $VERSION = '0.21'; # reused for all DAIA packages
+our $VERSION = '0.25';
+use IO::File;
 use XML::Simple; # only for parsing (may be changed)
 
 =head1 DESCRIPTION
@@ -23,11 +24,30 @@ The DAIA information objects as decriped in the DAIA specification are
 directly mapped to Perl packages. In addition a couple of functions can
 be exported if you prefer to handle DAIA data without much object-orientation.
 
-=SYNOPSIS
+=head1 SYNOPSIS
 
-A DAIA server can be implemented the following way:
+A DAIA client (with some variations):
 
   use DAIA;
+  use utf8;
+
+  # get via URL and parse  
+  use LWP::Simple;
+  $daia = DAIA::parse( data => get( $url ) );
+
+  # read a file and parse
+  $daia = DAIA::parse( file => $file );
+
+  # parse a string
+  use Encode; # if incoming data is unencoded UTF-8
+  $data = Encode::decode_utf8( $data ); # skip this if $data is just Unicode
+
+  $daia = DAIA::parse( data => $string );
+
+A DAIA server:
+
+  use DAIA;
+  use utf8;
 
   my $res = response(
       institution => {
@@ -102,13 +122,10 @@ Exporter::export_ok_tags;
 $EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
 Exporter::export_tags('all');
 
-# TODO: change carp mode
-#use Carp qw(verbose);
 use Carp;
-# use Carp::Clan qw(verbose);
-# or: use Carp::Clan qw(^DAIA::)
+# TODO; use Carp::Clan qw(^DAIA::)
 
-=head2 EXPORTED FUNCTIONS
+=head1 EXPORTED FUNCTIONS
 
 If you prefer function calls in favor of constructor calls, this package  
 providesfunctions for each DAIA class constructor. The functions are named  
@@ -118,6 +135,9 @@ To disable exporting of the functions include DAIA like this:
 
   use DAIA qw();      # do not export any functions
   use DAIA qw(serve); # only export function 'serve'
+
+By default all functions are exported (group :all) in addition you can specify
+the following groups:
 
 =over 4
 
@@ -137,25 +157,7 @@ C<department> (L<DAIA::department>),
 C<storage> (L<DAIA::Storage>), and
 C<limitation> (L<DAIA::Limitation>)
 
-=item message
-
-Includes the function C<message> (L<DAIA::Message>)
-
-=item :all
-
-Includes all functions.
-
-=item serve
-
-Calls the method method C<serve> of L<DAIA::Response> so you 
-can choose between function or method calling syntax:
-
-  serve( $response, @additionlArgs );
-  $response->serve( @additionlArgs );
-
 =back
-
-By default all functions are exported (group C<:all>).
 
 =cut
 
@@ -171,40 +173,186 @@ sub department   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::D
 sub storage      { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Storage->new( @_ ) }
 sub limitation   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Limitation->new( @_ ) }
 
+=head2 serve( [ [ format => ] $format ] [ %options ] )
+
+Calls the method method C<serve> of L<DAIA::Response> or another DAIA object
+to serialize and send a response to STDOUT with appropriate HTTP headers. 
+You can call it this way:
+
+  serve( $response, @additionlArgs );  # as function
+  $response->serve( @additionlArgs );  # as method
+
+=cut
+
 sub serve {
     local $Carp::CarpLevel = $Carp::CarpLevel + 1; 
     shift->serve( @_ );
 }
 
-=head2 Additional functions
+=head1 ADDITIONAL FUNCTIONS
 
-=head3 parse_xml( $xml, [ $xmlns ] )
+The following functions are not exportted but you can call both them as 
+function and as method:
 
-First sketch of an XML parser based on L<XML::Simple>. 
-There is little validation only. Not exported by default, but
-you can call it as C<DAIA::parse_xml>.
+  DAIA->parse_xml( $xml );
+  DAIA::parse_xml( $xml );
+
+=head2 parse_xml( $xml, [ xmlns => 0|1 ] )
+
+Parse DAIA/XML from a file or string. The first parameter must be a 
+filename, a string of XML, or a L<IO::Handle> object. The optional 
+parameter C<xmlns> defines whether parsing is namespace-aware - in
+this case all elements outside the DAIA XML namespace 
+C<http://ws.gbv.de/daia/> are ignored.
+
+Parsing is more lax then the specification so it silently ignores 
+elements and attributes in foreign namespaces. Returns either a DAIA 
+object or croaks on uncoverable errors.
 
 =cut
 
 sub parse_xml {
-    my ($xml, $xmlns) = @_;
+    shift if UNIVERSAL::isa( $_[0], __PACKAGE__ );
+    DAIA::parse( shift, format => 'xml', @_ );
+}
 
-    # TODO: namespace support: ignore everything not in the DAIA namespace
+=head2 parse_json( $json )
 
-    $xml = eval { XMLin( $xml, KeepRoot => 1, NSExpand => $xmlns ); };
+Parse DAIA/JSON from a file or string. The first parameter must be a 
+filename, a string of XML, or a L<IO::Handle> object.
+
+=cut
+
+sub parse_json {
+    shift if UNIVERSAL::isa( $_[0], __PACKAGE__ );    
+    DAIA::parse( shift, format => 'json' );
+}
+
+=head2 parse ( $from [ %parameter ] )
+
+Parse DAIA/XML or DAIA/JSON from a file or string. You can specify the source
+as filename, string, or L<IO::Handle> object as first parameter or with the
+named C<from> parameter. Alternatively you can pass a file(name) with parameter
+C<file> or a string with parameter C<data> which is more secure. The C<format>
+parameter (C<json> or C<xml>) is required unless the format can be detected 
+automatically the following way:
+
+=over
+
+=item *
+
+A scalar starting with C<E<lt>> and ending with C<E<gt>> is DAIA/XML.
+
+=item *
+
+A scalar starting with C<{> and ending with C<}> is DAIA/JSON.
+
+=item *
+
+A scalar ending with C<.json> is a DAIA/JSON.
+
+=item *
+
+A scalar ending with C<.xml> is a DAIA/XML.
+
+=back
+
+If you specify a filename with parameter C<file> it will not tried to parse
+the filename as DAIA content but only as filename.
+
+=cut
+
+sub parse {
+    shift if UNIVERSAL::isa( $_[0], __PACKAGE__ );
+    my ($from, %param) = (@_ % 2) ? (@_) : (undef,@_);
+    $from = $param{from} unless defined $from;
+    $from = $param{data} unless defined $from;
+    my $format = lc($param{format});
+    my $file = $param{file};
+    if (not defined $file and defined $from and not defined $param{data}) {
+        if( ref($from) eq 'GLOB' or UNIVERSAL::isa($from, 'IO::Handle')) {
+            $file = $from;
+        } elsif( $from eq '-' ) {
+            $file = \*STDIN;
+        } elsif( $from =~ /\.(xml|json)$/ ) {
+            $file = $from ;
+            $format = $1 unless $format;
+        }
+    }
+    if ( $file ) {
+        if ( ! (ref($file) eq 'GLOB' or UNIVERSAL::isa( $file, 'IO::Handle') ) ) {
+            $file = do { IO::File->new($file, '<:utf8') or croak("Failed to open file $file") };
+        }
+        # Enable :utf8 layer unless it or some other encoding has already been enabled
+        # $self->{filehandle} = IO::File->new($file, '<:utf8') or croak("failed to open file $file");
+        # my $fh = shift;
+        # foreach my $layer ( PerlIO::get_layers( $fh ) ) {
+        #     return if $layer =~ /^encoding|^utf8/;
+        # }
+        # binmode $fh, ':utf8';
+        $from = do { local $/; <$file> };
+        croak "DAIA serialization is empty" unless $from;
+    }
+
+    croak "Missing source to parse from " unless defined $from;
+
+    $format = guess($from) unless $format;
+
+    my $value;
+    my $root = 'Response';
+
+    if ( $format eq 'xml' ) {
+        # do not look for filename (security!)
+        if (defined $param{data} and guess($from) ne 'xml') {
+            croak("XML is not well-formed (<...>)");
+        }
+
+        $param{xmlns} = 0 unless defined $param{xmlns};
+        my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => $param{xmlns} ); };
+        croak $@ if $@;
+        croak "XML does not contain DATA information" unless $xml;
+
+        ($root, $value) = %$xml;
+        $root =~ s/{[^}]+}//;
+        $root = ucfirst($root);
+        $root = 'Response' if $root eq 'Daia';
+
+        _filter_xml( $value );
+
+    } elsif ( $format eq 'json' ) {
+        eval { $value = JSON->new->decode($from); };
+        croak $@ if $@;
+        if ( (keys %$value) == 1 ) {
+            my ($k => $v) = %$value;
+            if (not $k =~ /^(timestamp|message|institution|document)$/ and ref($v) eq 'HASH') {
+                ($root, $value) = (ucfirst($k), $v);
+            }
+        }
+        delete $value->{schema} if $root eq 'Response'; # ignore schema attribute
+    } else {
+        croak "Unknown DAIA serialization format $format";
+    }
+
+    croak "DAIA serialization is empty (maybe you forgot the XML namespace?)" unless $value;
+    my $object = eval 'DAIA::'.$root.'->new( $value )';  ##no critic
     croak $@ if $@;
-    croak "XML does not contain DATA information" unless $xml;
 
-    my ($root, $value) = %$xml;
-    $root =~ s/{[^}]+}//;
-    $root = ucfirst($root);
+    return $object;    
+}
 
-    _filter_xml( $value );
+=head1 guess ( $string )
 
-    my $object = eval "DAIA::$root->new( \$value )";
-    croak $@ if $@;
+Guess serialization format (DAIA/JSON or DAIA/XML) and return C<json>, C<xml> 
+or the empty string.
 
-    return $object;
+=cut
+
+sub guess {
+    my $data = shift;
+    return '' unless $data;
+    return 'xml' if $data =~ m{^\s*\<.*?\>\s*$}s;
+    return 'json' if $data =~ m{^\s*\{.*?\}\s*$}s;
+    return '';
 }
 
 # filter out non DAIA XML elements and 'xmlns' attribute
@@ -213,7 +361,7 @@ sub _filter_xml {
     map { _filter_xml($_) } @$xml if ref($xml) eq 'ARRAY';
     return unless ref($xml) eq 'HASH';
 
-    my @del = ('xmlns');
+    my @del;
     foreach my $key (keys %$xml) {
         if ($key =~ /^{([^}]*)}(.*)/) {
             if ($1 eq "http://ws.gbv.de/daia/") {
@@ -221,6 +369,8 @@ sub _filter_xml {
             } else {
                 push @del, $key;
             }
+        } elsif ($key =~ /^xmlns/ or $key =~ /:/) {
+            push @del, $key;
         }
     }
 

@@ -8,7 +8,7 @@ DAIA::Institution - Information the institutions that knows availabilities
 
 use strict;
 use base 'DAIA::Entity';
-our $VERSION = $DAIA::Entity::VERSION;
+our $VERSION = '0.25';
 our %PROPERTIES = %DAIA::Entity::PROPERTIES;
 
 1;

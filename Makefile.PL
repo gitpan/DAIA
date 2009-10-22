@@ -17,6 +17,7 @@ use ExtUtils::MakeMaker;
         'CGI' => '3.0',
         'URI' => '1.35',
         'XML::Simple' => '2.14',
+        'IO::File' => 0,
     },
     depend          => {
         Makefile => '$(VERSION_FROM)'

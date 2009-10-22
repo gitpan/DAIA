@@ -8,10 +8,10 @@ DAIA::Response - DAIA information root element
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
-use strict;
+our $VERSION = '0.25';
 use Carp qw(croak);
 use POSIX qw(strftime);
+use CGI; # qw(param header);
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,8 @@ use POSIX qw(strftime);
 
 =item document
 
-a list of L<DAIA::Document> objects.
+a list of L<DAIA::Document> objects. You can get/set document(s) with 
+the C<document> accessor, with C<addDocument>, and with C<provideDocument>.
 
 =item institution
 
@@ -44,7 +45,8 @@ items services and availabilities described in this response.
 
 =item message
 
-a list of L<DAIA::Message> objects.
+a list of L<DAIA::Message> objects. You can set message(s) with the 
+C<message> accessor, with C<addMessage>, and with C<provideMessage>.
 
 =item timestamp
 
@@ -77,72 +79,21 @@ our %PROPERTIES = (
     },
 );
 
+1;
+
 =head1 METHODS
 
-DAIA::Response provides the default methods of L<DAIA::Object>, accessor 
-methods for all of its properties and the following methods:
-
-=head2 addMessage ( $message | ... )
-
-Add a specified or a new L<DAIA::Message>.
-
-=head2 addDocument ( $document | %properties )
-
-Add a specified or a new L<DAIA::Document>.
+DAIA::Response provides the default methods of L<DAIA::Object> and accessor 
+methods for all of its properties. To serialize and send a HTTP response, you
+can use the method C<serve> which is accessible for all DAIA objects.
 
 =head2 serve ( [ [ format => ] $format ] [ %options ] )
 
 Serialize the response and send it to STDOUT with the appropriate HTTP headers.
-The required format (C<json> or C<xml> as default) can specified with the first
-parameter or the C<format> option. If no format is given, it is searched for in
-the CGI query parameters. Other possible options are
-
-=over
-
-=item header
-
-Print HTTP headers (default). Use C<header =E<gt> 0> to disable headers.
-
-=item xslt
-
-Add a link to the given XSLT stylesheet if XML format is requested.
-
-=item callback
-
-Add this JavaScript callback function in JSON format. If no callback
-function is specified, it is searched for in the CGI query parameters.
-You can disable callback support by setting C<callback => undef>.
+This method is available for all DAIA objects (see L<DAIA::Object>) but mostly
+used to serve a DAIA::Response.
 
 =back
-
-=cut
-
-sub serve {
-    my $self = shift;
-    my (%attr) = @_ % 2 ? ( 'format', @_ ) : @_;
-    my $format = exists $attr{'format'} ? lc($attr{'format'}) : CGI::param('format'); # TODO: use Apache::
-    my $header = defined $attr{header} ? $attr{header} : 1;
-    my $xslt = $attr{xslt};
-
-    if ( $format eq 'json' ) {
-        print CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
-        my $callback = exists $attr{callback} ? $attr{callback} : CGI::param('callback');
-        print $self->json( $attr{callback} );
-    } else {
-        print CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
-        print "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        print "<?xml-stylesheet type=\"text/xsl\" href=\"$xslt\"?>\n" if $xslt;
-
-        # TODO add 'xmlns' option
-        # Use a given XML namespace prefix in XML format. The default namespace
-        # prefix is C<d>. You should only need this if your clients don't use
-        # namespace-aware XML parsers.
-
-        print $self->xml( xmlns => "" );
-    }
-}
-
-1;
 
 =head1 AUTHOR
 

@@ -8,7 +8,7 @@ DAIA::Message - An optional information text or error message
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
+our $VERSION = '0.25';
 
 =head1 DESCRIPTION
 

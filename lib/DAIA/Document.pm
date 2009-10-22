@@ -8,8 +8,7 @@ DAIA::Document - Information about a single document
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = $DAIA::Object::VERSION;
-use strict;
+our $VERSION = '0.25';
 use Carp qw(croak);
 
 =head1 PROPERTIES

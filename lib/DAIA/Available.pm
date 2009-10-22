@@ -15,7 +15,7 @@ a C<DAIA::Unavailable> object is always C<1>.
 
 use strict;
 use base 'DAIA::Availability';
-our $VERSION = $DAIA::Availability::VERSION;
+our $VERSION = '0.25';
 use DateTime::Duration;
 use DateTime::Format::Duration;
 

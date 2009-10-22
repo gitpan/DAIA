@@ -14,7 +14,7 @@ C<status> property of a C<DAIA::Unavailable> object is always C<0>.
 
 use strict;
 use base 'DAIA::Availability';
-our $VERSION = $DAIA::Availability::VERSION;
+our $VERSION = '0.25';
 use DateTime::Format::ISO8601;
 use DAIA::Available qw(parse_duration);
 

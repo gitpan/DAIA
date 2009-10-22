@@ -29,4 +29,8 @@ is_deeply( $d1, $daia, 'copy constructor' );
 #$daia->institution( DAIA::Institution->new( "..." ) );
 #my $inst = $daia->institution;
 
+# TODO: test 'serve'
+
+#print "\n\n" . $daia->xml . "\n\n";
+#$daia->serve( xslt => "daia.xsl" );
 

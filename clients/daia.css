@@ -26,25 +26,27 @@ td { border: 1px solid #666; padding: 3px; }
 /* delay or expected time */
 .time {
   padding-left: 22px; line-height: 18px; display: inline-block; 
-  background:transparent url(18px-Nuvola-clock.png) center left no-repeat
+  background:transparent url(icons/clock_16.png) center left no-repeat
 }
 
 /* fragmented item and limited access */
 /* tr.fragment td, td.limited { background: #ccc; } */
 .limitation {  border: 1px solid #BB7070; background: #FFDBDB; }
+.limited { background: #FFDBDB; }
+.limited { background: #FFDBDB; }
 
 /* status icons (0=unknown, 1=available, 2=not available, 3=currently not available) */
-.status0, .status1, .status2, .status3 { padding-left: 25px; line-height: 20px;
+.status0, .available, .status2, .status3 { padding-left: 25px; line-height: 20px;
     display: inline-block; }
-.status0 { background:transparent url(18px-Bullet-grey.png) center left no-repeat; }
-.status1 { background:transparent url(18px-Bullet-green.png) center left no-repeat; }
-.status2 { background:transparent url(18px-Bullet-red.png) center left no-repeat; }
-.status3 { background:transparent url(18px-Bullet-ambar.png) center left no-repeat; }
+.status0 { background:transparent url(icons/questionmark_16.png) center left no-repeat; }
 
-.limited .status1 { background:transparent url(18px-Bullet-green-half.png) center left no-repeat; }
-.limited .status3 { background:transparent url(18px-Bullet-ambar-half.png) center left no-repeat; }
-.fragment .status1 { background:transparent url(18px-Bullet-green-half.png) center left no-repeat; }
-.fragment .status3 { background:transparent url(18px-Bullet-ambar-half.png) center left no-repeat; }
+/*
+.available { background:transparent url(18px-Bullet-green.png) center left no-repeat; }
+.status2 { background:transparent url(18px-Bullet-red.png) center left no-repeat; }
+.status3 { background:transparent url(questionmark_16.png) center left no-repeat; }
+*/
+.loan .available { background:transparent url(icons/daia_loan_16.png) center left no-repeat; }
+.presentation .available { background:transparent url(icons/daia_presentation_16.png) center left no-repeat; }
 
 
 /* xmlverbatim */

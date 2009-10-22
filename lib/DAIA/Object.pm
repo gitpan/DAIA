@@ -7,11 +7,11 @@ DAIA::Object - Abstract base class of all DAIA classes
 =cut
 
 use strict;
+our $VERSION = '0.25';
 use Carp qw(croak confess);
 use Data::Validate::URI qw(is_uri is_web_uri);
 use JSON;
 
-our $VERSION = $DAIA::VERSION;
 our $AUTOLOAD;
 
 =head1 DESCRIPTION
@@ -114,24 +114,33 @@ sub add {
 
 A DAIA object can be serialized by the following methods:
 
-=head3 xml ( [ $xmlns ] )
+=head3 xml ( [ xmlns => 0|1 ] [ xslt => $xslt ] [ header => 0|1 ] )
 
-Returns the object in DAIA/XML. If you specify C<xmlns> as parameter, 
-then a namespace declaration is added.
+Returns the object in DAIA/XML. With the C<xmlns> as parameter you can 
+specify that a namespace declaration is added (disabled by default 
+unless you enable xslt or header). With C<xslt> you can add an XSLT 
+processing instruction. If you enable C<header>, an XML-header is 
+prepended.
 
 =cut
 
 sub xml {
-    my ($self, $xmlns) = @_;
+    my ($self, %param) = @_;
+
+    $param{xmlns} = ($param{xslt} or $param{header}) unless $param{xmlns};
 
     my $name = lc(ref($self)); 
     $name =~ s/^daia:://;
     $name = 'daia' if $name eq 'response';
 
     my $struct = $self->struct;
-    $struct->{xmlns} = "http://ws.gbv.de/daia/" if $xmlns;
+    $struct->{xmlns} = "http://ws.gbv.de/daia/" if $param{xmlns};
     my $xml = xml_write( $name, $struct, 0 );
-    delete $struct->{xmlns} if $xmlns;
+    delete $struct->{xmlns} if $param{xmlns};
+
+    $xml = "<?xml-stylesheet type=\"text/xsl\" href=\"" . xml_escape_value($param{xslt}) . "\"?>\n$xml" 
+        if $param{xslt};
+    $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n$xml" if $param{header};
 
     return $xml;
 }
@@ -180,6 +189,60 @@ sub json {
     }
 }
 
+=head2 serve ( [ [ format => ] $format ] [ %options ] )
+
+Serialize the object and send it to STDOUT with the appropriate HTTP headers.
+This method is available for all DAIA objects but mostly used to serve a
+L<DAIA::Response>. The serialized object must already be encoded in UTF-8 
+(but it can contain Unicode strings) because serialization does UTF-8 encoding.
+
+The required format (C<json> or C<xml> as default) can specified with the first
+parameter or the C<format> option. If no format is given, it is searched for in
+the CGI query parameters. Other possible options are
+
+=over
+
+=item header
+
+Print HTTP headers (default). Use C<header =E<gt> 0> to disable headers.
+
+=item xslt
+
+Add a link to the given XSLT stylesheet if XML format is requested.
+
+=item callback
+
+Add this JavaScript callback function in JSON format. If no callback
+function is specified, it is searched for in the CGI query parameters.
+You can disable callback support by setting C<callback => undef>.
+
+=item continue
+
+By default this method exits the program. You can prevent exiting with
+this parameter.
+
+=cut
+
+sub serve {
+    my $self = shift;
+    my (%attr) = @_ % 2 ? ( 'format', @_ ) : @_;
+    # TODO: support Apache::...
+    my $format = exists $attr{'format'} ? lc($attr{'format'}) : CGI::param('format');
+    my $header = defined $attr{header} ? $attr{header} : 1;
+    my $xslt = $attr{xslt};
+
+    binmode STDOUT, "utf8";
+    if ( defined $format and $format eq 'json' ) {
+        print CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
+        my $callback = exists $attr{callback} ? $attr{callback} : CGI::param('callback');
+        print $self->json( $attr{callback} );
+    } else {
+        print CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
+        print $self->xml( xmlns => 1, header => 1, xslt => $xslt );
+    }
+    exit unless $attr{'continue'};
+}
+
 =head1 INTERNAL METHODS
 
 The following methods are only used internally; don't directly
@@ -205,9 +268,6 @@ sub AUTOLOAD {
 
     my $property = $method;
     $property = lc($2) if $property =~ /^(add|provide)([A-Z][a-z]+)$/;
-
-#print "\nSELF: " . Dumper($self);
-#print "$class->$property( " . Dumper(\@_) . ");\n";
 
     no strict 'refs'; ##no critic
     my $PROPERTIES = \%{$class."::PROPERTIES"};
@@ -241,70 +301,76 @@ sub AUTOLOAD {
 
     my $value = $_[0];
 
-    # called as clearer (implies possibly setting the default value)
+    # called as clearer (may imply setting the default value)
     if (not defined $value or (ref($value) eq 'ARRAY' and @{$value} == 0)) {
         if ( exists $opt->{default} ) {
-#print "use default value\n";
             $value = ref($opt->{default}) eq 'CODE' 
                    ? $opt->{default}() : $opt->{default};
         } 
-#print "V: $value\n";
         if ( defined $value ) {  
             $self->{$property} = $value;
         } else {
             delete $self->{$property} if exists $self->{$property};
         }
-#print Dumper($self);
         return;
     }
 
-    # filter attributes (if a filter is defined)
-    if( $opt->{filter} ) {
-        $value = $opt->{filter}( @_ );
-        confess "$class->$property did not pass value constraint"
-            unless defined $value;
-        $self->{$property} = $value;
-        return;
-    }
-#print "---\n";
-#print Dumper($opt);
-
-    #$value = [ $value ] unless 
     if ( $opt->{type} ) {
+        # set one or more typed values
 
-        # make $value an array reference
-        $value = \@_ unless @_ == 1 and ref($value) eq 'ARRAY'; 
+        # arguments must be either an array ref or a list of types or a simple list
+        my @args;
 
-        # make $value[0] to be of right type
-        if ( UNIVERSAL::isa( $value->[0], $opt->{type} ) ) {
-            foreach ( @{$value} ) {
-                croak "$class->$property can only have values of class " . $opt->{type}
-                    unless UNIVERSAL::isa( $_, $opt->{type} );
+        if ( ref($_[0]) eq 'ARRAY' ) {
+            croak "too many arguments" if @_ > 1;
+            @args = @{$_[0]};
+        } elsif ( UNIVERSAL::isa( $_[0], $opt->{type} ) ) {
+            # treat ( $obj, ... ) as ( [ $obj, ... ] )
+            @args = @_;
+        } else {
+            @args = ( [ @_ ] ); # one element
+        }
+
+        croak "$class->$property is not repeatable"
+            if ( @args > 1 and not $opt->{repeatable});
+
+        my @values = map {
+            my $v;
+            if ( ref($_) eq 'ARRAY' ) {
+                $v = eval $opt->{type}.'->new( @{$_} )';  ##no critic
+                croak $@ if $@;
+            } elsif ( UNIVERSAL::isa( $_, $opt->{type} ) ) {
+                $v = $_;
+            } else {
+                $v = eval $opt->{type}.'->new( $_ )';  ##no critic
+                croak $@ if $@;
             }
+            $v;
+        } @args;
+
+        $self->{$property} = $opt->{repeatable} ? \@values : $values[0];
+
+    } else { 
+        # set an untyped value (never repeatable, stringified unless filtered)
+
+        if( $opt->{filter} ) {
+            $value = $opt->{filter}( @_ );
+            confess "$class->$property did not pass value constraint"
+                unless defined $value;
         } else {
-            $value = [ eval $opt->{type}."->new( \@{\$value} )" ];  ##no critic
-            croak $@ if $@;
+            $value = "$value";
         }
 
-        if ( $opt->{repeatable} ) {
-            $self->{$property} = $value;
-        } else {
-            croak "$class->$property is not repeatable"
-                if (@{$value} > 1);
-            $self->{$property} = $value->[0];
-        }
-
-    } else { # untyped values are never repeatable
-        $self->{$property} = "$value"; # stringify all non-objects
+        $self->{$property} = $value;
     }
 
-    #print "!!!!!!!!!1\n";
-    #use Data::Dumper; print Dumper($value) . "\n";
+    $self; # if called as setter, return the object for chaining
 }
 
 =head2 xml_write ( $roottag, $content, $level )
 
-Simple, adopted XML::Simple::XMLOut replacement with support of element order
+Simple, adopted XML::Simple::XMLOut replacement with support of element order 
+and special treatment of C<label> elements.
 
 =cut
 
@@ -320,13 +386,13 @@ sub xml_write {
         delete $struct->{content};
     }
 
-    my @attr = grep { ! ref($struct->{$_}); } keys %$struct;
+    my @attr = grep { ! ref($struct->{$_}) and $_ ne 'label' } keys %$struct;
     @attr = map { "$_=\"".xml_escape_value($struct->{$_}).'"' } @attr;
     $tag .= " " . join(" ", @attr) if @attr;
 
     # get the right order
     my @order = qw(message institution document label department storage available unavailable);
-    my @children = grep { ref($struct->{$_}) } @order;
+    my @children = grep { defined $struct->{$_} } @order;
     my %has = map { $_ => 1 } @children;
     # append additional children
     push @children, grep { ref($struct->{$_}) and not $has{$_} } keys %$struct;
@@ -336,7 +402,9 @@ sub xml_write {
         push @lines, "$tag>";
         foreach my $k (@children) {
             $k =~ s/^\d//;
-            if ( ref($struct->{$k}) eq 'HASH' ) {
+            if ( $k eq 'label' ) {
+                push @lines, "$indent  <label>".xml_escape_value($struct->{label})."</label>";
+            } elsif ( ref($struct->{$k}) eq 'HASH' ) {
                 push @lines, xml_write($k, $struct->{$k}, $level+1);
             } elsif ( ref($struct->{$k}) eq 'ARRAY' ) {
                 foreach my $v (@{$struct->{$k}}) {
@@ -380,7 +448,9 @@ Returns a property-value hash of constructor parameters.
 
 sub _buildargs {
     # TODO croak on un-even-list
-    shift; @_; 
+    shift; 
+    croak "uneven parameter list" if (@_ % 2);
+    @_; 
 };
 
 
@@ -399,11 +469,6 @@ our %COMMON_PROPERTIES =(
 );
 
 1;
-
-=head1 BUGS
-
-The XML serialization does not use the right element order and there is
-no strict parsing mode yet. More examples will be included too.
 
 =head1 AUTHOR
 

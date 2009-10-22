@@ -5,7 +5,7 @@
     <xs:annotation>
       <xs:documentation>Document Availability Information API (DAIA) XML Schema.
         Describes the current availability of different services about an information
-        resource at a given institution. Version: 0.52 (2009-09-04) by Jakob Voss.
+        resource at a given institution. Version: 0.53 (2009-10-15) by Jakob Voss.
       </xs:documentation>
     </xs:annotation>
   </xs:element> 
@@ -33,7 +33,7 @@
       <xs:sequence maxOccurs="unbounded">
         <xs:choice>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="message" type="message"/>          
-          <xs:element maxOccurs="unbounded" minOccurs="0" name="item" type="item"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" ref="item"/>
         </xs:choice>
       </xs:sequence>
       <xs:attribute name="id" type="xs:anyURI" use="required">
@@ -48,12 +48,14 @@
       </xs:attribute>
     </xs:complexType>
   <!-- item type -->
-  <xs:complexType name="item">
+  <xs:element name="item" type="item">
     <xs:annotation>
       <xs:documentation>An identified information object. This record corresponds to the class Item
         in FRBR. That means multiple copies are encoded with multiple occurrences of this element.
       </xs:documentation>
     </xs:annotation>  
+  </xs:element>
+  <xs:complexType name="item">
       <xs:sequence>
         <xs:element maxOccurs="unbounded" minOccurs="0" name="message" type="message"/>
         <xs:element maxOccurs="1" minOccurs="0" ref="label"/>
@@ -105,7 +107,7 @@
           </xs:element>
         </xs:choice>
       </xs:sequence>
-      <xs:attribute name="id" type="xs:anyURI" use="required">
+      <xs:attribute name="id" type="xs:anyURI" use="optional">
         <xs:annotation>
           <xs:documentation>An item must be identified by an URI. Real URIs of a given schema should
             be used, but you can also use pseudo URIs that only match the lexical form of an

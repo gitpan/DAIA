@@ -21,11 +21,15 @@ t/50item.t
 t/60document.t
 t/70response.t
 t/80xml.t
+t/85json.t
+t/example.json
+t/example.xml
 
 clients/daia.css  
 clients/daia.xsl
 clients/xmlverbatim.xsl
 clients/daia.xsd
+clients/daiaformat.pl
 
 Makefile.PL
 README

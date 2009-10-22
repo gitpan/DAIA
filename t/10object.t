@@ -10,25 +10,14 @@ isa_ok( $item, 'DAIA::Item' );
 my $item2 = item($item);
 is_deeply( $item2, $item, 'copy constructor' );
 
-#$item->storage('here');
-#my $item2 = item( storage => storage( 'there'  ) );
-
 $item->add();
 is_deeply( $item, $item2, 'add nothing' );
 
 $item->add(undef);
 is_deeply( $item, $item2, 'add undef = nothing' );
 
-$item->label( "foo" );
-is( $item->label, "foo", "label" );
+$item = item()->fragment(0)->message( ["foo","bar"] );
 
-__END__
-
-$item->struct( { storage => { 'foo' } } );
-
-print $item->json;
-
-ok(1);
-
-#    ; # nothing
-#    $h->add( undef ); # nothing
+$item = DAIA::parse( '{ "item" : { "id" : "my:id" } }' );
+isa_ok( $item, "DAIA::Item" );
+is_deeply( $item->struct, { "id" => "my:id" } );
