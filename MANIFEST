@@ -24,12 +24,13 @@ t/80xml.t
 t/85json.t
 t/example.json
 t/example.xml
+t/example2.xml
 
 clients/daia.css  
 clients/daia.xsl
 clients/xmlverbatim.xsl
 clients/daia.xsd
-clients/daiaformat.pl
+clients/daia
 
 Makefile.PL
 README

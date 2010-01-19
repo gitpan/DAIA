@@ -2,7 +2,7 @@ package DAIA::Institution;
 
 =head1 NAME
 
-DAIA::Institution - Information the institutions that knows availabilities
+DAIA::Institution - Organization that may hold items and provide services
 
 =cut
 

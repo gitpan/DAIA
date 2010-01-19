@@ -2,7 +2,10 @@
 
 use strict;
 use Test::More qw( no_plan );
-use DAIA;
+use DAIA qw(is_uri item);
+
+ok( is_uri("my:foo"), 'exported is_uri (1)' );
+ok( !is_uri("123"), 'exported is_uri (0)' );
 
 my $item = item();
 isa_ok( $item, 'DAIA::Item' );

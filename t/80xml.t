@@ -3,6 +3,7 @@
 use strict;
 use utf8;
 use Test::More qw( no_plan );
+use IO::File;
 use DAIA;
 
 # Support XML Schema Validating
@@ -67,13 +68,13 @@ ok( $@, "detect errors in XML" );
 $object = DAIA->parse_xml("<item label='&gt;' />");
 is_deeply( $object->struct, { label => ">" }, "label attribute (undocumented)" );
 
-# TODO: more examples (read and write), including edge cases and errors
+# TODO: add more examples (read and write), including edge cases and errors
 
 
 my $fromjson = DAIA::parse("t/example.json");
 
 open FILE, "t/example.xml";
-my @files = ("t/example.xml", \*FILE);
+my @files = ("t/example.xml", \*FILE, IO::File->new("t/example2.xml"));
 foreach my $file (@files) {
     my $d = DAIA::parse( $file );
     isa_ok( $d, 'DAIA::Response' );

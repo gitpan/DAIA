@@ -4,33 +4,49 @@ use strict;
 use Test::More qw( no_plan );
 use DAIA;
 
+ok( DAIA::is_uri("my:foo"), 'is_uri (1)' );
+ok( !DAIA::is_uri("123"), 'is_uri (0)' );
+
 my $daia = response;
 isa_ok( $daia, 'DAIA::Response' );
 
 my $doc = document( id => 'my:123' );
 
-#$daia->document( [ $doc ] );
-#$daia = response( document => [ $doc ] );
-
 my $d1 = response( $daia );
 is_deeply( $d1, $daia, 'copy constructor' );
 
-#$daia->document( [ document( id => 'my:id' ) ] );
-#$d1 = response( institution => institution('foo') );
-#isa_ok( $d1, "DAIA::Response" );
-#$daia = response( institution => { content => 'foo' } );
-#is_deeply( $daia, $d1 );
 
-#$daia = DAIA::Response->new(
-#  institution => institution( content => "..." ),
-#  message => [ message( "en" => "all right" ) ]
-#);
+#### test method DAIA::Object::serve
+my $item = item();
+my $out;
 
-#$daia->institution( DAIA::Institution->new( "..." ) );
-#my $inst = $daia->institution;
+use CGI;
+my $cgi = new CGI;
+my %p = ( to => \$out, header => 0, exitif => sub { return 0; } );
 
-# TODO: test 'serve'
+test_serve(
+  [ [], qr/<item/, 'default format is XML' ],
+  [ ['xml'], qr/<item/, 'serialized as XML' ],
+  [ [$cgi], qr/<item/, 'default format is XML' ],
+  [ ['format' => 'xml'], qr/<item/, 'serialized as XML' ],
+  [ ['json'], qr/{/, 'serialized as JSON' ],
+  [ ['format' => 'json'], qr/{/, 'serialized as JSON' ],
+);
 
-#print "\n\n" . $daia->xml . "\n\n";
-#$daia->serve( xslt => "daia.xsl" );
+$cgi->param('format','json');
+test_serve( [ [$cgi], qr/^\s*{/, 'format set to JSON' ] );
+$cgi->param('callback','foo');
+test_serve( [ [$cgi], qr/^foo\(\s*{/, 'format set to JSON with callback' ] );
+test_serve( [ ['json', callback => 'bar'], qr/^bar\(\s*{/, 'format set to JSON with callback' ] );
 
+# TODO: test 'xslt', 'to', 'exitif' etc.
+
+sub test_serve {
+    foreach my $test (@_) {
+        $out = "";
+        my @arg = @{$test->[0]};
+        push @arg, %p;
+        $item->serve( @arg );
+        like( $out, $test->[1], $test->[2] );
+    }
+}

@@ -2,7 +2,7 @@ package DAIA::Item;
 
 =head1 NAME
 
-DAIA::Item - Holds information about an item of a L<DAIA::Document>.
+DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =cut
 

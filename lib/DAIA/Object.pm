@@ -7,9 +7,10 @@ DAIA::Object - Abstract base class of all DAIA classes
 =cut
 
 use strict;
-our $VERSION = '0.25';
-use Carp qw(croak confess);
+our $VERSION = '0.26';
+use Carp::Clan;
 use Data::Validate::URI qw(is_uri is_web_uri);
+use IO::Scalar;
 use JSON;
 
 our $AUTOLOAD;
@@ -94,7 +95,7 @@ sub add {
 
         #print "- " . ref($value) . "\n";
 
-        confess "Cannot add $value to " . ref($self) 
+        croak "Cannot add $value to " . ref($self) 
             unless ref($value) =~ /^DAIA::([A-Z][a-z]+)$/;
         my $property = lc($1);
     
@@ -189,16 +190,17 @@ sub json {
     }
 }
 
-=head2 serve ( [ [ format => ] $format ] [ %options ] )
+=head2 serve ( [ [ format => ] $format | [ cgi => $CGI ] ] [ %more_options ] )
 
-Serialize the object and send it to STDOUT with the appropriate HTTP headers.
-This method is available for all DAIA objects but mostly used to serve a
-L<DAIA::Response>. The serialized object must already be encoded in UTF-8 
-(but it can contain Unicode strings) because serialization does UTF-8 encoding.
+Serialize the object and send it to STDOUT or a another stream with the 
+appropriate HTTP headers. This method is available for all DAIA objects but
+mostly used to serve a L<DAIA::Response>. The serialized object must already
+be encoded in UTF-8 (but it can contain Unicode strings).
 
-The required format (C<json> or C<xml> as default) can specified with the first
-parameter or the C<format> option. If no format is given, it is searched for in
-the CGI query parameters. Other possible options are
+The serialization format should be specified with the first parameter as
+C<format> string (C<json> or C<xml>) or C<cgi> object. If no format is
+given, it is searched for in the L<CGI> query parameters. The default 
+format is C<xml>. Other possible options are:
 
 =over
 
@@ -214,33 +216,61 @@ Add a link to the given XSLT stylesheet if XML format is requested.
 
 Add this JavaScript callback function in JSON format. If no callback
 function is specified, it is searched for in the CGI query parameters.
-You can disable callback support by setting C<callback => undef>.
+You can disable callback support by setting C<callback =E<gt> undef>.
 
-=item continue
+=item to
 
-By default this method exits the program. You can prevent exiting with
-this parameter.
+Serialize to a given stream (L<IO::Handle>, GLOB, or string reference)
+instead of STDOUT. You probably also want to set C<exitif> if you use
+this option.
+
+=item exitif
+
+By default this method exits the program. You can change this behavior
+with this parameter. With C<exitif = 0> the method never calls exit. If
+you provide a method, the method is called and the script exits if only
+if the return value is true.
 
 =cut
 
 sub serve {
     my $self = shift;
-    my (%attr) = @_ % 2 ? ( 'format', @_ ) : @_;
-    # TODO: support Apache::...
-    my $format = exists $attr{'format'} ? lc($attr{'format'}) : CGI::param('format');
+    my $first = shift if @_ % 2;
+    my (%attr) = @_;
+    if ( UNIVERSAL::isa( $first,"CGI" ) ) {
+        $attr{cgi} = $first;
+    } elsif (defined $first) {
+        $attr{format} = $first;
+    }
+    if (not exists $attr{'format'}) {
+        $attr{cgi} = CGI->new unless $attr{cgi};
+        $attr{format} = $attr{'cgi'}->param('format');
+    }
+    $attr{exitif} = 1 unless exists $attr{exitif};
+
+    my $format = lc($attr{format});
     my $header = defined $attr{header} ? $attr{header} : 1;
     my $xslt = $attr{xslt};
-
-    binmode STDOUT, "utf8";
-    if ( defined $format and $format eq 'json' ) {
-        print CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
-        my $callback = exists $attr{callback} ? $attr{callback} : CGI::param('callback');
-        print $self->json( $attr{callback} );
-    } else {
-        print CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
-        print $self->xml( xmlns => 1, header => 1, xslt => $xslt );
+    my $to = $attr{to} || \*STDOUT;
+    if ( ref($to) eq 'SCALAR' ) {
+        $to = IO::Scalar->new( $to );
     }
-    exit unless $attr{'continue'};
+    _enable_utf8_layer($to);
+
+    if ( defined $format and $format eq 'json' ) {
+        print $to CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
+        if (not exists $attr{callback}) {
+            $attr{cgi} = CGI->new unless $attr{cgi};
+            $attr{callback} = $attr{cgi}->param('callback');
+        }
+        print $to $self->json( $attr{callback} );
+    } else {
+        print $to CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
+        print $to $self->xml( xmlns => 1, header => 1, xslt => $xslt );
+    }
+
+    $attr{'exitif'} = $attr{'exitif'}() if ref($attr{'exitif'}) eq 'CODE';
+    exit if $attr{'exitif'};
 }
 
 =head1 INTERNAL METHODS
@@ -272,13 +302,13 @@ sub AUTOLOAD {
     no strict 'refs'; ##no critic
     my $PROPERTIES = \%{$class."::PROPERTIES"};
 
-    confess "Method $class->$method ($property) does not exist"
+    croak "Method $class->$method ($property) does not exist"
         unless exists $PROPERTIES->{$property};
 
     my $opt = $PROPERTIES->{$property};
 
     if ( $method =~ /^add/ ) {
-        confess "$class->$property is not repeatable or has no type"
+        croak "$class->$property is not repeatable or has no type"
             unless $opt->{repeatable} and $opt->{type};
         my $value = $_[0];
         if ( not UNIVERSAL::isa( $_[0], $opt->{type} ) ) {
@@ -355,7 +385,7 @@ sub AUTOLOAD {
 
         if( $opt->{filter} ) {
             $value = $opt->{filter}( @_ );
-            confess "$class->$property did not pass value constraint"
+            croak "$class->$property did not pass value constraint: " . join(',',@_)
                 unless defined $value;
         } else {
             $value = "$value";
@@ -452,6 +482,22 @@ sub _buildargs {
     croak "uneven parameter list" if (@_ % 2);
     @_; 
 };
+
+=head2 _enable_utf8_layer
+
+Enable :utf8 layer for a given filehandle unless it or some
+other encoding has already been enabled.
+
+=cut
+
+sub _enable_utf8_layer {
+    my $fh = shift;
+    return unless eval{ can($fh, 'binmode'); };
+    foreach my $layer ( PerlIO::get_layers( $fh ) ) {
+        return if $layer =~ /^encoding|^utf8/;
+    }
+    binmode $fh, ':utf8';
+}
 
 
 # some constants

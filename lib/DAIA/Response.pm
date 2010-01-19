@@ -8,8 +8,7 @@ DAIA::Response - DAIA information root element
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = '0.25';
-use Carp qw(croak);
+our $VERSION = '0.26';
 use POSIX qw(strftime);
 use CGI; # qw(param header);
 
@@ -67,7 +66,7 @@ our %PROPERTIES = (
     },
     timestamp => {
         default => sub { strftime("%Y-%m-%dT%H:%M:%SZ", gmtime); },
-        filter => sub { $_[0] } # TODO
+        filter => sub { $_[0] } # TODO: check format 
     },
     message => $DAIA::Object::COMMON_PROPERTIES{message},
     institution => { 

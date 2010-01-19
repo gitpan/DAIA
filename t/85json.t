@@ -9,11 +9,11 @@ my $d;
 
 # test error handling of DAIA::parse
 eval { DAIA->parse( file => "notexist" ); };
-like( $@, qr/^Failed to open file notexist/ );
+like( $@, qr/Failed to open file notexist/ );
 
 # TODO: this might not work on Windows
 eval { DAIA->parse( file => "/dev/null" ); };
-like( $@, qr/^DAIA serialization is empty/ );
+like( $@, qr/DAIA serialization is empty/ );
 
 # TODO: more error handling
 

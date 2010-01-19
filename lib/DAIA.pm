@@ -7,9 +7,7 @@ DAIA - Document Availability Information API in Perl
 =cut
 
 use strict;
-our $VERSION = '0.25';
-use IO::File;
-use XML::Simple; # only for parsing (may be changed)
+our $VERSION = '0.26';
 
 =head1 DESCRIPTION
 
@@ -26,78 +24,162 @@ be exported if you prefer to handle DAIA data without much object-orientation.
 
 =head1 SYNOPSIS
 
-A DAIA client (with some variations):
+=head2 DAIA client
 
+  #!/usr/bin/perl
   use DAIA;
-  use utf8;
 
-  # get via URL and parse  
-  use LWP::Simple;
-  $daia = DAIA::parse( data => get( $url ) );
+  $daia = DAIA::parse( $url );          # parse from URL
+  $daia = DAIA::parse( file => $file ); # parse from File
 
-  # read a file and parse
-  $daia = DAIA::parse( file => $file );
-
-  # parse a string
+  # parse from string
   use Encode; # if incoming data is unencoded UTF-8
   $data = Encode::decode_utf8( $data ); # skip this if $data is just Unicode
-
   $daia = DAIA::parse( data => $string );
 
-A DAIA server:
+This package also includes and installs the command line and CGI client
+L<daia> to fetch, validate and convert DAIA data. See also the C<clients>
+directory for an XML Schema of DAIA/XML and an XSLT script to transform it
+to HTML.
 
-  use DAIA;
-  use utf8;
+=head2 DAIA server
 
-  my $res = response(
-      institution => {
-        href    => "http://example.com/homepage.of.institutiong",
-        content => "Name of the Institution" 
-      }
-  );
+First an example of a DAIA server as CGI script. You need to implement all
+C<get_...> methods to return meaningful values. Some more hints how
+to run a DAIA Server below under under L<#DAIA Server hints>.
 
-  my $id = '12345'; # identifier that has been queried for
+  #!/usr/bin/perl
+  use DAIA qw(is_uri);
+  use CGI;
+  use utf8; # if source code containts UTF-8
 
-  my @holdings = get_holding_information($id);  # you need to implement this!
+  my $r = response( institution => {
+          href    => "http://example.com/homepage.of.institution",
+          content => "Name of the Institution" 
+  } );
+
+  my $id = CGI->new->param('id');
+  $r->addMessage("en" => "Not an URI: $id", errno => 1 ) unless is_uri($id);
+  my @holdings = get_holding_information($id);  # YOU need to implement this!
 
   if ( @holdings ) {
-    my $doc = document( id => $id, href => "http://example.com/docs/$id" );
-    foreach my $h ( @holdings ) {
-      my $item = item();
+      my $doc = document( id => $id, href => "http://example.com/docs/$id" );
+      foreach my $h ( @holdings ) {
+          my $item = item();
 
-      # add some general information if you implement get_holding_... functions
+          my %sto = get_holding_storage( $h );
+          $item->storage( id => $sto{id}, href => $sto{href}, $sto{name} );
 
-      my %sto = get_holding_storage( $h );  
-      $item->storage( id => $sto{id}, href => $sto{href}, $sto{name} );
+          my $label = get_holding_label( $h );
+          $item->label( $label );
 
-      my $label = get_holding_label( $h );
-      $item->label( $label );
+          my $url = get_holding_url( $h );
+          $item->href( $url );
 
-      my $url = get_holding_url( $h );
-      $item->href( $url );
+          # add availability services
+          my @services;
 
-      # add availability services
-      my @services;
-
-      if ( get_holding_is_here( $h ) ) {
-         push @services, available('presentation'), available('loan');
-      } elsif( get_holding_is_not_here( $h ) ) {
-        push @services, # expected to be back in 5 days
-          unavailable( 'presentation', expected => 'P5D' ),
-          unavailable( 'loan', expected => 'P5D' );
-      } else {
-         # ... more cases (depending on the complexity of you application)
+          if ( get_holding_is_here( $h ) ) {
+              push @services, available('presentation'), available('loan');
+          } elsif( get_holding_is_not_here( $h ) ) {
+              push @services, # expected to be back in 5 days
+              unavailable( 'presentation', expected => 'P5D' ),
+              unavailable( 'loan', expected => 'P5D' );
+          } else {
+             #  more cases (depending on the complexity of you application)
+          }
+          $item->add( @services );
       }
-      $item->add( @services );
-    }
-    $res->document( $doc );
+      $r->document( $doc );
   } else {
-     $res->message( "en" => "No holding information found for id $id" );
+      $r->addMessage( "en" => "No holding information found for id $id" );
   }
 
-  $res->serve( xslt => "http://path.to/daia.xsl" );
+  $r->serve( xslt => "http://path.to/daia.xsl" );
+
+In order to get your script run as CGI, you may have to enable CGI with 
+C<Options +ExecCGI> and C<AddHandler cgi-script .pl> in your Apache
+configuration or C<.htaccess>. 
+
+=head1 DAIA Server hints
+
+DAIA server scripts can be tested on command line by providing HTTP
+parameters as C<key=value> pairs.
+
+It is recommended to run a DAIA server via L<mod_perl> or FastCGI so
+it does not need to be compiled each time it is run. For mod_perl you
+simply put your script in a directory which C<PerlResponseHandler> has
+been set for (for instance to L<Apache::Registry> or L<ModPerl::PerlRun>).
+
+For FastCGI you need to install L<FCGI> and set the CGI handler to
+L<AddHandler fcgid-script .pl> in C<.htaccess>. Your DAIA server must
+consist of an initialization section and a response loop:
+
+  #!/usr/bin/perl
+  use DAIA;
+  use CGI::Fast;
+
+  # ...initialization section, which is executed only once ...
+
+  while (my $q = new CGI::Fast) { # response loop
+      my $id = $q->param('id');
+
+      # ... create response ...
+     
+      $response->serve( cgi => $q, exitif => 0 );
+  }
+
+The C<serve> methods needs a C<cgi> or C<format> parameter and it is
+been told not to exit the script. It is recommended to check every
+given timespan whether the script has been modified and restart in
+this case:
+
+  #!/usr/bin/perl
+  use DAIA;
+  use CGI::Fast;
+
+  my $started = time;
+  my $thisscript = $0;
+  my $lastmod = stat($thisscript)->mtime;
+
+  sub restart {
+      return 0 if time - $started < 10; # check every 10 seconds
+      return 1 if stat($thisscript)->mtime > $lastmod;
+  }
+
+  while (my $q = new CGI::Fast) { # response loop
+
+      # ... create response ...
+
+      $response->serve( $q, exitif => \&restart } );
+  }
 
 =cut
+
+#use File::stat;
+#use CGI::Fast qw(:standard);
+#my $started = time;
+#
+#while (my $q = new CGI::Fast) {
+#    $r->serve( exitif => { $c++ > 0 } );
+#
+#}
+
+
+use base 'Exporter';
+our %EXPORT_TAGS = (
+    core => [qw(response document item available unavailable availability)],
+    entities => [qw(institution department storage limitation)],
+);
+our @EXPORT_OK = qw(is_uri);
+Exporter::export_ok_tags;
+$EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
+Exporter::export_tags('all');
+
+use Carp::Clan; # qw(^DAIA::);
+use IO::File;
+use LWP::Simple qw(get);
+use XML::Simple; # only for parsing (may be changed)
 
 use DAIA::Response;
 use DAIA::Document;
@@ -112,18 +194,7 @@ use DAIA::Department;
 use DAIA::Storage;
 use DAIA::Limitation;
 
-use base 'Exporter';
-our %EXPORT_TAGS = (
-    core => [qw(response document item available unavailable availability)],
-    entities => [qw(institution department storage limitation)],
-);
-our @EXPORT_OK = ();
-Exporter::export_ok_tags;
-$EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
-Exporter::export_tags('all');
-
-use Carp;
-# TODO; use Carp::Clan qw(^DAIA::)
+use Data::Validate::URI qw(is_uri);
 
 =head1 EXPORTED FUNCTIONS
 
@@ -228,37 +299,37 @@ sub parse_json {
     DAIA::parse( shift, format => 'json' );
 }
 
-=head2 parse ( $from [ %parameter ] )
+=head2 parse ( $from [ %parameters ] )
 
 Parse DAIA/XML or DAIA/JSON from a file or string. You can specify the source
 as filename, string, or L<IO::Handle> object as first parameter or with the
-named C<from> parameter. Alternatively you can pass a file(name) with parameter
-C<file> or a string with parameter C<data> which is more secure. The C<format>
-parameter (C<json> or C<xml>) is required unless the format can be detected 
-automatically the following way:
+named C<from> parameter. Alternatively you can either pass a filename or URL with
+parameter C<file> or a string with parameter C<data>. If the filename is an URL,
+its content will be fetched via HTTP. The C<format> parameter (C<json> or C<xml>)
+is required unless the format can be detected automatically the following way:
 
 =over
 
 =item *
 
-A scalar starting with C<E<lt>> and ending with C<E<gt>> is DAIA/XML.
+A scalar starting with C<E<lt>> and ending with C<E<gt>> is parsed as DAIA/XML.
 
 =item *
 
-A scalar starting with C<{> and ending with C<}> is DAIA/JSON.
+A scalar starting with C<{> and ending with C<}> is parsed as DAIA/JSON.
 
 =item *
 
-A scalar ending with C<.json> is a DAIA/JSON.
+A scalar ending with C<.json> is parsed as DAIA/JSON.
 
 =item *
 
-A scalar ending with C<.xml> is a DAIA/XML.
+A scalar ending with C<.xml> is is parsed as DAIA/XML.
 
 =back
 
-If you specify a filename with parameter C<file> it will not tried to parse
-the filename as DAIA content but only as filename.
+The parameter C<xmlns> (by default set to true) can be used to disable 
+namespace-expanding when parsing DAIA/XML.
 
 =cut
 
@@ -280,17 +351,19 @@ sub parse {
         }
     }
     if ( $file ) {
-        if ( ! (ref($file) eq 'GLOB' or UNIVERSAL::isa( $file, 'IO::Handle') ) ) {
-            $file = do { IO::File->new($file, '<:utf8') or croak("Failed to open file $file") };
+        if ( $file =~ /^http(s)?:\/\// ) {
+            $from = get($file) or croak "Failed to fetch $file via HTTP"; 
+        } else {
+            if ( ! (ref($file) eq 'GLOB' or UNIVERSAL::isa( $file, 'IO::Handle') ) ) {
+                $file = do { IO::File->new($file, '<:utf8') or croak("Failed to open file $file") };
+            }
+            # Enable :utf8 layer unless it or some other encoding has already been enabled
+            # foreach my $layer ( PerlIO::get_layers( $file ) ) {
+            #    return if $layer =~ /^encoding|^utf8/;
+            #}
+            binmode $file, ':utf8';
+            $from = do { local $/; <$file> };
         }
-        # Enable :utf8 layer unless it or some other encoding has already been enabled
-        # $self->{filehandle} = IO::File->new($file, '<:utf8') or croak("failed to open file $file");
-        # my $fh = shift;
-        # foreach my $layer ( PerlIO::get_layers( $fh ) ) {
-        #     return if $layer =~ /^encoding|^utf8/;
-        # }
-        # binmode $fh, ':utf8';
-        $from = do { local $/; <$file> };
         croak "DAIA serialization is empty" unless $from;
     }
 
@@ -307,8 +380,13 @@ sub parse {
             croak("XML is not well-formed (<...>)");
         }
 
-        $param{xmlns} = 0 unless defined $param{xmlns};
+        if (guess($from) eq 'xml') {
+            utf8::encode($from);;
+            #print "IS UTF8?". utf8::is_utf8($from) . "\n";
+        }
+        $param{xmlns} = 1 unless defined $param{xmlns};
         my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => $param{xmlns} ); };
+
         croak $@ if $@;
         croak "XML does not contain DATA information" unless $xml;
 
@@ -340,7 +418,7 @@ sub parse {
     return $object;    
 }
 
-=head1 guess ( $string )
+=head2 guess ( $string )
 
 Guess serialization format (DAIA/JSON or DAIA/XML) and return C<json>, C<xml> 
 or the empty string.
@@ -355,20 +433,28 @@ sub guess {
     return '';
 }
 
-# filter out non DAIA XML elements and 'xmlns' attribute
+=head2 is_uri ( $value )
+
+Checks whether the value is a well-formed URI. This function is imported from
+L<Data::Validate::URI> into the namespace of this package as C<DAIA::is_uri>
+and can be exported into the default namespace on request.
+
+=cut
+
+# filter out non DAIA XML elements and 'xmlns' attributes
 sub _filter_xml { 
     my $xml = shift;
     map { _filter_xml($_) } @$xml if ref($xml) eq 'ARRAY';
     return unless ref($xml) eq 'HASH';
 
-    my @del;
+    my (@del,%add);
     foreach my $key (keys %$xml) {
         if ($key =~ /^{([^}]*)}(.*)/) {
             if ($1 eq "http://ws.gbv.de/daia/") {
-                $xml->{$2} = $xml->{$1};
-            } else {
-                push @del, $key;
+                #%add{$2} = 
+                $xml->{$2} = $xml->{$key};
             }
+            push @del, $key;
         } elsif ($key =~ /^xmlns/ or $key =~ /:/) {
             push @del, $key;
         }
@@ -382,6 +468,12 @@ sub _filter_xml {
 }
 
 1;
+
+=head1 SEE ALSO
+
+Please report bugs and feature requests via L<https://rt.cpan.org/Public/Dist/Display.html?Name=DAIA>.
+The classes of this package are implemented using L<DAIA::Object> which is just another
+Perl meta-class framework.
 
 =head1 AUTHOR
 

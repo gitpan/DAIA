@@ -14,11 +14,17 @@ use ExtUtils::MakeMaker;
         'DateTime::Format::Duration' => '1.03',
         'DateTime::Format::ISO8601' => '0.06',
         'JSON' => '2.15',
+        'LWP::Simple' => '1.4',
         'CGI' => '3.0',
         'URI' => '1.35',
         'XML::Simple' => '2.14',
         'IO::File' => 0,
+        'IO::Scalar' => '1.126',
+        'Carp::Clan' => '5.0',
     },
+    EXE_FILES       => [ 
+        'clients/daia', 
+    ],
     depend          => {
         Makefile => '$(VERSION_FROM)'
     },
