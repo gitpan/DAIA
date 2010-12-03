@@ -8,7 +8,7 @@ DAIA::Message - An optional information text or error message
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = '0.25';
+our $VERSION = '0.27';
 
 =head1 DESCRIPTION
 
@@ -67,6 +67,13 @@ To append a message you can use the C<add> or the C<addMessage> method:
   $document->addMessage( ... );   # ... is passed to message constructor
 
   $document += $msg;              # same as $document->add( $msg );
+
+In addition to the C<message> function there is the C<error> function to quickly
+construct error messages. The first parameter is always treated as error number:
+
+  error() # errno = 0
+  error( $errno [, $lang => $content ] ) 
+  error( $errno, $content [, lang => $lang ] )
 
 =cut
 
@@ -133,7 +140,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at

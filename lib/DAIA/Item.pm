@@ -8,10 +8,9 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = '0.25';
+our $VERSION = '0.28';
 
 use DAIA;
-use Data::Validate::URI qw(is_uri is_web_uri);
 use JSON;
 
 =head1 PROPERTIES
@@ -20,23 +19,45 @@ use JSON;
 
 =item id
 
+The unique identifier of this item (optional). Must be an URI if given.
+
 =item href
+
+A link to the item or to additional information about it.
 
 =item message
 
-repeatbale
+An optional list of L<DAIA::Message> objects. You can set message(s) with
+the C<message> accessor, with C<addMessage>, and with C<provideMessage>.
 
 =item fragment
 
+Whether the item only contains a part of the document.
+B<this property will likely be renamed>.
+
 =item label
+
+A label that helps to identify and/or find the item (signature etc.).
 
 =item department
 
+A L<DAIA::Department> object with an administrative sub-entitity of the
+institution that is connected to this item (for instance the holding
+library branch).
+
 =item storage
+
+A L<DAIA::Storage> object with the physical location of the item (stacks, floor etc.).
 
 =item available
 
+An optional list of L<DAIA::Available> objects with available services that can
+be performed with this item.
+
 =item unavailable
+
+An optional list of L<DAIA::Unavailable> objects with unavailable services 
+that can (currently or in general) not be performed with this item.
 
 =cut
 
@@ -111,10 +132,12 @@ sub addAvailability {
 
 =head2 Additional query methods
 
-=head3 services ( [ $list-of-services ] )
+=head3 services ( [ @services ] )
 
 Returns a (possibly empty) hash of services mapped to lists
-of L<DAIA::Availability> objects for the given services.
+of L<DAIA::Availability> objects for the given services. If
+you provide a list of wanted services (each specified by its 
+URI or by its short name), you only get those services.
 
 =cut
 
@@ -147,7 +170,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at

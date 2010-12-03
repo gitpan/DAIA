@@ -9,7 +9,7 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 use strict;
 use Data::Validate::URI qw(is_uri is_web_uri);
 use base 'DAIA::Object';
-our $VERSION = '0.25';
+our $VERSION = '0.29';
 
 =head1 PROPERTIES
 
@@ -37,10 +37,10 @@ our %PROPERTIES = (
         filter => sub { defined $_[0] ? "$_[0]" : "" }
     },
     href => {
-        filter => sub { my $v = "$_[0]"; is_web_uri($v) ? $v : undef; }
+        filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_web_uri($v) ? $v : undef; }
     },
     id => {
-        filter => sub { my $v = "$_[0]"; is_uri($v) ? $v : undef; }
+        filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_uri($v) ? $v : undef; }
     }
 );
 
@@ -57,7 +57,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at

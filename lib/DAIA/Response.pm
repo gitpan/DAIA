@@ -8,9 +8,8 @@ DAIA::Response - DAIA information root element
 
 use strict;
 use base 'DAIA::Object';
-our $VERSION = '0.26';
+our $VERSION = '0.28';
 use POSIX qw(strftime);
-use CGI; # qw(param header);
 
 =head1 SYNOPSIS
 
@@ -84,15 +83,41 @@ our %PROPERTIES = (
 
 DAIA::Response provides the default methods of L<DAIA::Object> and accessor 
 methods for all of its properties. To serialize and send a HTTP response, you
-can use the method C<serve> which is accessible for all DAIA objects.
+can use the method C<serve>, which is accessible for all DAIA objects.
 
 =head2 serve ( [ [ format => ] $format ] [ %options ] )
 
 Serialize the response and send it to STDOUT with the appropriate HTTP headers.
-This method is available for all DAIA objects (see L<DAIA::Object>) but mostly
-used to serve a DAIA::Response.
+This method is mostly used to serve DAIA::Response objects, but it is also 
+available for other DAIA objects. See L<DAIA::Object/serve> for a description.
 
-=back
+In most cases, a simple call of C<$response-E<gt>serve> will be the last
+statement of a DAIA server implementation.
+
+=head2 check_valid_id ( $id )
+
+Check whether a valid identifier has been provided. If not, this methods 
+appends an error message ("please provide a document id" or "document id
+... is no valid URI") and returns undef.
+
+=cut
+
+sub check_valid_id {
+    my $self = shift;
+    my $id = shift; # TODO: take from CGI object, if not given
+
+    if ( ! defined $id ) {
+        $self->addMessage( "en" => "please provide a document id!", errno => 1 );
+    } elsif ( ! DAIA::is_uri( $id ) ) {
+        $id = " $id";
+        $id = (substr($id,0,32) . '...') if (length($id) > 32);
+        $self->addMessage( "en" => "document id$id is no valid URI!", errno => 2 );
+    } else {
+        return $id;
+    }
+
+    return undef;
+}
 
 =head1 AUTHOR
 
@@ -100,7 +125,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at

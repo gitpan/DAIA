@@ -19,6 +19,8 @@ my %entities = (
   'Institution' => \&institution
 );
 
+my @hidden = qw(format cgi header xmlheader xslt pi callback exitif);
+
 foreach my $class (keys %entities) {
     my $shortcut = $entities{$class};
     $class = "DAIA::$class";
@@ -29,11 +31,16 @@ foreach my $class (keys %entities) {
     isa_ok( $e, $class, "empty constructor" );
 
     my $uri = "info:isil/DE-Tue120";
+    $uri = "  $uri " if ($class eq 'Storage'); # add whitespace
+
     my $content = "hello, world!"; # TODO: use Unicode here
     my $url = "http://search.cpan.org";
-    my $hashref = { id => $uri, content => $content, href => $url };
+    $url = "  $url " if ($class eq 'Storage'); # add whitespace
 
-    $e = &$shortcut( %$hashref );
+    my $hashref = { id => $uri, content => $content, href => $url };
+    my %hiddenprop = ( (shift @hidden) => 'foo', (shift @hidden) => 'bar' );
+
+    $e = &$shortcut( %$hashref, %hiddenprop );
     is( $e->id, $uri, "id (shortcut constructor)" );
     is( $e->content, $content, "content (shortcut constructor)" );
     is( $e->href, $url, "href (shortcut constructor)" );
@@ -41,7 +48,8 @@ foreach my $class (keys %entities) {
     my $e2 = &$shortcut();
     $e2->id( $uri );
     $e2->content( $content );
-    $e2->href( $url );
+    $e2->href( " $url" );
+    delete $e->{_hidden};
     is_deeply( $e2, $e, 'writer accessors' );
 
     my $json = $e->json;
@@ -61,6 +69,9 @@ foreach my $class (keys %entities) {
     my $copy = &$shortcut( $e );
     $e->content("xxx");
     is_deeply( $copy, $hashref, 'copy constructor' );
+
+    #my $copy = &$shortcut( $e );
+    #is_deeply( $copy, $hashref, 'copy constructor ignores hidden' );
 
     $e->content(undef);
     is( $e->content, '', 'undef is empty string' );

@@ -7,13 +7,17 @@ DAIA::Object - Abstract base class of all DAIA classes
 =cut
 
 use strict;
-our $VERSION = '0.26';
+our $VERSION = '0.29';
 use Carp::Clan;
+use CGI; # TODO: allow other kind of CGI
 use Data::Validate::URI qw(is_uri is_web_uri);
 use IO::Scalar;
+use UNIVERSAL 'isa';
 use JSON;
 
 our $AUTOLOAD;
+our @HIDDEN_PROPERTIES = 
+    qw(to format xmlns cgi header xmlheader xslt pi callback exitif noutf8);
 
 =head1 DESCRIPTION
 
@@ -39,7 +43,11 @@ abstract base class directly calling is of little use.
 
 =head3 new ( ..attributes... )
 
-Constructs a new DAIA object. Unknown properties are ignored.
+Constructs a new DAIA object. Unknown properties are ignored. In addition
+the following special properties are stored as hidden properties, that 
+will not be copied to other objects, but only used for serializing the
+object: C<to>, C<format>, C<cgi>, C<header>, C<xmlheader>, C<xmlns>,
+C<xslt>, C<pi>, C<callback>, C<exitif>.
 
 =cut
 
@@ -64,16 +72,25 @@ sub new {
         $class = ref($self);
     }
 
+    my %hidden;
+    foreach ( @HIDDEN_PROPERTIES ) {
+        next unless exists $hash{$_};
+        $hidden{$_} = $hash{$_};
+        delete $hash{$_};
+    }
+    $self->{_hidden} = \%hidden if %hidden;
+
     no strict 'refs'; ##no critic
     my $PROPERTIES = \%{$class."::PROPERTIES"};
     foreach my $property (keys %{$PROPERTIES}) {
         $self->$property( undef ) unless exists $hash{$property};
     }
+
     foreach my $property (keys %hash) {
         $self->$property( $hash{$property} );
     }
 
-    # print Dumper($self)."\n";
+    #use Data::Dumper; print Dumper($self)."\n";
     return $self;
 }
 
@@ -115,32 +132,40 @@ sub add {
 
 A DAIA object can be serialized by the following methods:
 
-=head3 xml ( [ xmlns => 0|1 ] [ xslt => $xslt ] [ header => 0|1 ] )
+=head3 xml ( [ xmlns => 0|1 ] [ xslt => $xslt ] [ header => 0|1 ] [ pi => $pi ] )
 
 Returns the object in DAIA/XML. With the C<xmlns> as parameter you can 
 specify that a namespace declaration is added (disabled by default 
 unless you enable xslt or header). With C<xslt> you can add an XSLT 
-processing instruction. If you enable C<header>, an XML-header is 
-prepended.
+processing instruction and with C<pi> any other processing instructions.
+If you enable C<header>, an XML-header is prepended.
+
+All TODO
 
 =cut
 
 sub xml {
     my ($self, %param) = @_;
+    $self->_hidden_prop( \%param );
 
-    $param{xmlns} = ($param{xslt} or $param{header}) unless $param{xmlns};
+    my $xmlns = $param{xmlns} || ($param{xslt} or $param{header});
+    my $pi = $param{pi} || [ ];
+    $pi = [$pi] unless isa($pi,'ARRAY');
+
+    push @$pi, 'xml-stylesheet type="text/xsl" href="' . xml_escape_value($param{xslt}) . '"'
+        if $param{xslt};
+    @$pi = map { $_ =~ /^<\?.*\?>$/ ? "$_\n" : "<?$_?>\n" } @$pi;
 
     my $name = lc(ref($self)); 
     $name =~ s/^daia:://;
     $name = 'daia' if $name eq 'response';
 
     my $struct = $self->struct;
-    $struct->{xmlns} = "http://ws.gbv.de/daia/" if $param{xmlns};
+    $struct->{xmlns} = "http://ws.gbv.de/daia/" if $xmlns;
     my $xml = xml_write( $name, $struct, 0 );
-    delete $struct->{xmlns} if $param{xmlns};
+    delete $struct->{xmlns} if $xmlns;
 
-    $xml = "<?xml-stylesheet type=\"text/xsl\" href=\"" . xml_escape_value($param{xslt}) . "\"?>\n$xml" 
-        if $param{xslt};
+    $xml = join('', @$pi ) . $xml;
     $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n$xml" if $param{header};
 
     return $xml;
@@ -158,6 +183,7 @@ sub struct {
     my ($self, $json) = @_;
     my $struct = { };
     foreach my $property (keys %$self) {
+        next unless $property =~ /^[a-z]+$/;
         if (ref $self->{$property} eq 'ARRAY') {
             $struct->{$property} = [ map { $_->struct($json) } @{$self->{$property}} ];
         } elsif ( UNIVERSAL::isa( $self->{$property}, "DAIA::Object" ) ) {
@@ -176,12 +202,16 @@ sub struct {
 =head2 json ( [ $callback ] )
 
 Returns the object in DAIA/JSON, optionally wrapped by a JavaScript callback 
-function call. Invalid callback names are ignored without warning.
+function call. Invalid callback names are ignored without warning. The hidden
+property C<callback> is used if no callback parameter is provided, use C<undef>
+to fully disable the callback.
 
 =cut
 
 sub json {
     my ($self, $callback) = @_;
+    $callback = $self->{_hidden}->{callback} 
+        if @_ < 2 and $self->{_hidden} and exists $self->{_hidden}->{callback};
     my $json = JSON->new->pretty->encode( $self->struct(1) );
     if ( defined $callback and $callback =~ /^[a-z][a-z0-9._\[\]]*$/i ) {
         return "$callback($json);"
@@ -197,7 +227,7 @@ appropriate HTTP headers. This method is available for all DAIA objects but
 mostly used to serve a L<DAIA::Response>. The serialized object must already
 be encoded in UTF-8 (but it can contain Unicode strings).
 
-The serialization format should be specified with the first parameter as
+The serialization format can be specified with the first parameter as
 C<format> string (C<json> or C<xml>) or C<cgi> object. If no format is
 given, it is searched for in the L<CGI> query parameters. The default 
 format is C<xml>. Other possible options are:
@@ -208,9 +238,17 @@ format is C<xml>. Other possible options are:
 
 Print HTTP headers (default). Use C<header =E<gt> 0> to disable headers.
 
+=head xmlheader
+
+Print the XML header of XML format is used. Enabled by default.
+
 =item xslt
 
-Add a link to the given XSLT stylesheet if XML format is requested.
+Add a link to the given XSLT stylesheet if XML format is used.
+
+=item pi
+
+Add one or more processing instructions if XML format is used.
 
 =item callback
 
@@ -221,13 +259,12 @@ You can disable callback support by setting C<callback =E<gt> undef>.
 =item to
 
 Serialize to a given stream (L<IO::Handle>, GLOB, or string reference)
-instead of STDOUT. You probably also want to set C<exitif> if you use
+instead of STDOUT. You may also want to set C<exitif> if you use
 this option.
 
 =item exitif
 
-By default this method exits the program. You can change this behavior
-with this parameter. With C<exitif = 0> the method never calls exit. If
+By setting this method to a true value you make it to exit the program.
 you provide a method, the method is called and the script exits if only
 if the return value is true.
 
@@ -237,7 +274,9 @@ sub serve {
     my $self = shift;
     my $first = shift if @_ % 2;
     my (%attr) = @_;
-    if ( UNIVERSAL::isa( $first,"CGI" ) ) {
+    $self->_hidden_prop( \%attr );
+
+    if ( UNIVERSAL::isa( $first,'CGI' ) ) {
         $attr{cgi} = $first;
     } elsif (defined $first) {
         $attr{format} = $first;
@@ -246,16 +285,22 @@ sub serve {
         $attr{cgi} = CGI->new unless $attr{cgi};
         $attr{format} = $attr{'cgi'}->param('format');
     }
-    $attr{exitif} = 1 unless exists $attr{exitif};
+    $attr{exitif} = 0 unless exists $attr{exitif};
 
     my $format = lc($attr{format});
     my $header = defined $attr{header} ? $attr{header} : 1;
     my $xslt = $attr{xslt};
+    my $pi = $attr{pi};
+    my $xmlheader = defined $attr{xmlheader} ? $attr{xmlheader} : 1;
     my $to = $attr{to} || \*STDOUT;
     if ( ref($to) eq 'SCALAR' ) {
+        $$to = "";
         $to = IO::Scalar->new( $to );
     }
-    _enable_utf8_layer($to);
+    #_enable_utf8_layer($to); # TODO: this does not work
+    if (! $attr{noutf8} ) {
+        eval{ binmode $to, ':utf8'  };
+    }
 
     if ( defined $format and $format eq 'json' ) {
         print $to CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
@@ -266,7 +311,8 @@ sub serve {
         print $to $self->json( $attr{callback} );
     } else {
         print $to CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
-        print $to $self->xml( xmlns => 1, header => 1, xslt => $xslt );
+        my $xml = $self->xml( xmlns => 1, header => 1, xslt => $xslt, pi => $pi, header => $xmlheader );
+        print $to $xml."\n";
     }
 
     $attr{'exitif'} = $attr{'exitif'}() if ref($attr{'exitif'}) eq 'CODE';
@@ -477,11 +523,27 @@ Returns a property-value hash of constructor parameters.
 =cut
 
 sub _buildargs {
-    # TODO croak on un-even-list
     shift; 
     croak "uneven parameter list" if (@_ % 2);
     @_; 
 };
+
+=head2 _hidden_prop ( $hashref )
+
+Enrich a hash with hidden properties.
+
+=cut
+
+sub _hidden_prop {
+    my $self = shift;
+    return unless $self->{_hidden};
+
+    my $hashref = shift;
+    foreach ( @HIDDEN_PROPERTIES ) {
+        next if exists $hashref->{$_} or not exists $self->{_hidden}->{$_};
+        $hashref->{$_} = $self->{_hidden}->{$_};
+    }
+}
 
 =head2 _enable_utf8_layer
 
@@ -503,8 +565,11 @@ sub _enable_utf8_layer {
 # some constants
 our %COMMON_PROPERTIES =( 
     id => {
-        filter => sub { my $v = "$_[0]"; is_uri($v) ? $v : undef; }
+        filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_uri($v) ? $v : undef; }
     },
+#    href => {
+#        filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_web_uri($v) ? $v : undef; }
+#    },
     href => { 
         filter => sub { my $v = "$_[0]"; is_web_uri($v) ? $v : undef; }
     },
@@ -522,7 +587,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at

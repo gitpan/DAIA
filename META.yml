@@ -1,25 +1,34 @@
 --- #YAML:1.0
-name:                DAIA
-version:             0.26
-abstract:            Document Availability Information API in Perl
-license:             ~
-author:              
+name:               DAIA
+version:            0.3
+abstract:           Document Availability Information API in Perl
+author:
     - Jakob Voss <jakob.voss@gbv.de>
-generated_by:        ExtUtils::MakeMaker version 6.42
-distribution_type:   module
-requires:     
-    Carp::Clan:                    5.0
-    CGI:                           3.0
-    Data::Validate::URI:           0.05
-    DateTime::Duration:            0
-    DateTime::Format::Duration:    1.03
-    DateTime::Format::ISO8601:     0.06
-    IO::File:                      0
-    IO::Scalar:                    1.126
-    JSON:                          2.15
-    LWP::Simple:                   1.4
-    URI:                           1.35
-    XML::Simple:                   2.14
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    Carp:                 0
+    Carp::Clan:           5.0
+    CGI:                  3.0
+    Data::Validate::URI:  0.05
+    DateTime:             0.50
+    DateTime::Duration:   0
+    DateTime::Format::Duration:  1.03
+    IO::File:             0
+    IO::Scalar:           1.126
+    JSON:                 2.15
+    LWP::Simple:          1.4
+    URI:                  1.35
+    XML::Simple:          2.14
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.55_02
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

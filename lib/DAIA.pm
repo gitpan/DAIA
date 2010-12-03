@@ -7,16 +7,17 @@ DAIA - Document Availability Information API in Perl
 =cut
 
 use strict;
-our $VERSION = '0.26';
+our $VERSION = '0.3';
 
 =head1 DESCRIPTION
 
 The Document Availability Information API (DAIA) defines a data model with 
 serializations in JSON and XML to encode information about the current 
-availability of documents. See L<http://purl.org/NET/DAIA> for a detailed
-specification. This package provides Perl classes and functions to easily
-create and manage DAIA information. It can be used to implement DAIA servers,
-clients, and other programs that handle availability information.
+availability of documents. See L<http://daia.sourceforge.net/> for more 
+information and the recent developer version. This package provides Perl 
+classes and functions to easily create and manage DAIA information. It can
+be used to implement DAIA servers, clients, and other programs that handle 
+availability information.
 
 The DAIA information objects as decriped in the DAIA specification are
 directly mapped to Perl packages. In addition a couple of functions can
@@ -46,11 +47,11 @@ to HTML.
 
 First an example of a DAIA server as CGI script. You need to implement all
 C<get_...> methods to return meaningful values. Some more hints how
-to run a DAIA Server below under under L<#DAIA Server hints>.
+to run a DAIA Server below under under L</DAIA Server hints>.
 
   #!/usr/bin/perl
-  use DAIA qw(is_uri);
-  use CGI;
+  use DAIA;
+  use CGI; # or some other CGI module, for instance CGI::Minimal
   use utf8; # if source code containts UTF-8
 
   my $r = response( institution => {
@@ -59,7 +60,8 @@ to run a DAIA Server below under under L<#DAIA Server hints>.
   } );
 
   my $id = CGI->new->param('id');
-  $r->addMessage("en" => "Not an URI: $id", errno => 1 ) unless is_uri($id);
+  $r->addMessage("en" => "Not an URI: $id", errno => 1 )
+      unless DAIA::is_uri($id);
   my @holdings = get_holding_information($id);  # YOU need to implement this!
 
   if ( @holdings ) {
@@ -101,70 +103,7 @@ In order to get your script run as CGI, you may have to enable CGI with
 C<Options +ExecCGI> and C<AddHandler cgi-script .pl> in your Apache
 configuration or C<.htaccess>. 
 
-=head1 DAIA Server hints
-
-DAIA server scripts can be tested on command line by providing HTTP
-parameters as C<key=value> pairs.
-
-It is recommended to run a DAIA server via L<mod_perl> or FastCGI so
-it does not need to be compiled each time it is run. For mod_perl you
-simply put your script in a directory which C<PerlResponseHandler> has
-been set for (for instance to L<Apache::Registry> or L<ModPerl::PerlRun>).
-
-For FastCGI you need to install L<FCGI> and set the CGI handler to
-L<AddHandler fcgid-script .pl> in C<.htaccess>. Your DAIA server must
-consist of an initialization section and a response loop:
-
-  #!/usr/bin/perl
-  use DAIA;
-  use CGI::Fast;
-
-  # ...initialization section, which is executed only once ...
-
-  while (my $q = new CGI::Fast) { # response loop
-      my $id = $q->param('id');
-
-      # ... create response ...
-     
-      $response->serve( cgi => $q, exitif => 0 );
-  }
-
-The C<serve> methods needs a C<cgi> or C<format> parameter and it is
-been told not to exit the script. It is recommended to check every
-given timespan whether the script has been modified and restart in
-this case:
-
-  #!/usr/bin/perl
-  use DAIA;
-  use CGI::Fast;
-
-  my $started = time;
-  my $thisscript = $0;
-  my $lastmod = stat($thisscript)->mtime;
-
-  sub restart {
-      return 0 if time - $started < 10; # check every 10 seconds
-      return 1 if stat($thisscript)->mtime > $lastmod;
-  }
-
-  while (my $q = new CGI::Fast) { # response loop
-
-      # ... create response ...
-
-      $response->serve( $q, exitif => \&restart } );
-  }
-
 =cut
-
-#use File::stat;
-#use CGI::Fast qw(:standard);
-#my $started = time;
-#
-#while (my $q = new CGI::Fast) {
-#    $r->serve( exitif => { $c++ > 0 } );
-#
-#}
-
 
 use base 'Exporter';
 our %EXPORT_TAGS = (
@@ -173,10 +112,10 @@ our %EXPORT_TAGS = (
 );
 our @EXPORT_OK = qw(is_uri);
 Exporter::export_ok_tags;
-$EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
+$EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve', 'error'];
 Exporter::export_tags('all');
 
-use Carp::Clan; # qw(^DAIA::);
+use Carp; # use Carp::Clan; # qw(^DAIA::);
 use IO::File;
 use LWP::Simple qw(get);
 use XML::Simple; # only for parsing (may be changed)
@@ -207,8 +146,8 @@ To disable exporting of the functions include DAIA like this:
   use DAIA qw();      # do not export any functions
   use DAIA qw(serve); # only export function 'serve'
 
-By default all functions are exported (group :all) in addition you can specify
-the following groups:
+By default all functions are exported (group :all) which adds 13 functions 
+to the default namespace! Alternatively you can specify the following groups:
 
 =over 4
 
@@ -230,6 +169,9 @@ C<limitation> (L<DAIA::Limitation>)
 
 =back
 
+The functions C<message>, C<error> and C<serve> are also exported by default.
+See L<DAIA::Message> for the parameters of C<message> or C<error>.
+
 =cut
 
 sub response     { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Response->new( @_ ) }
@@ -243,6 +185,12 @@ sub institution  { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::I
 sub department   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Department->new( @_ ) }
 sub storage      { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Storage->new( @_ ) }
 sub limitation   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Limitation->new( @_ ) }
+
+sub error { 
+    local $Carp::CarpLevel = $Carp::CarpLevel + 1; 
+    my $errno = @_ ? shift : 0;
+    return DAIA::Message->new( @_ ? (@_, errno => $errno) : (errno => $errno) );
+}
 
 =head2 serve( [ [ format => ] $format ] [ %options ] )
 
@@ -268,13 +216,10 @@ function and as method:
   DAIA->parse_xml( $xml );
   DAIA::parse_xml( $xml );
 
-=head2 parse_xml( $xml, [ xmlns => 0|1 ] )
+=head2 parse_xml( $xml )
 
 Parse DAIA/XML from a file or string. The first parameter must be a 
-filename, a string of XML, or a L<IO::Handle> object. The optional 
-parameter C<xmlns> defines whether parsing is namespace-aware - in
-this case all elements outside the DAIA XML namespace 
-C<http://ws.gbv.de/daia/> are ignored.
+filename, a string of XML, or a L<IO::Handle> object.
 
 Parsing is more lax then the specification so it silently ignores 
 elements and attributes in foreign namespaces. Returns either a DAIA 
@@ -328,8 +273,10 @@ A scalar ending with C<.xml> is is parsed as DAIA/XML.
 
 =back
 
-The parameter C<xmlns> (by default set to true) can be used to disable 
-namespace-expanding when parsing DAIA/XML.
+Normally this function or method returns a single DAIA object. When parsing 
+DAIA/XML it may also return a list of objects. It is recommended to always
+expect a list unless you are absolutely sure that the result of parsing will
+be a single DAIA object!
 
 =cut
 
@@ -372,6 +319,7 @@ sub parse {
     $format = guess($from) unless $format;
 
     my $value;
+    my @objects;
     my $root = 'Response';
 
     if ( $format eq 'xml' ) {
@@ -384,38 +332,57 @@ sub parse {
             utf8::encode($from);;
             #print "IS UTF8?". utf8::is_utf8($from) . "\n";
         }
-        $param{xmlns} = 1 unless defined $param{xmlns};
-        my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => $param{xmlns} ); };
+
+        my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => 1, KeyAttr => [ ] ); };
+        $xml = daia_xml_roots($xml);
 
         croak $@ if $@;
-        croak "XML does not contain DATA information" unless $xml;
+        croak "XML does not contain DAIA elements" unless $xml;
 
-        ($root, $value) = %$xml;
-        $root =~ s/{[^}]+}//;
-        $root = ucfirst($root);
-        $root = 'Response' if $root eq 'Daia';
+        while (my ($root,$value) = each(%$xml)) {
+            $root =~ s/{[^}]+}//;
+            $root = ucfirst($root);
+            $root = 'Response' if $root eq 'Daia';
 
-        _filter_xml( $value );
+            _filter_xml( $value ); # filter out all non DAIA elements and namespaces
+
+            $value = [ $value ] unless ref($value) eq 'ARRAY';
+
+            foreach my $v (@$value) {
+                # TODO: croak of $root is not known!
+                my $object = eval 'DAIA::'.$root.'->new( $v )';  ##no critic
+                croak $@ if $@;
+                push @objects, $object;
+            }
+        }
 
     } elsif ( $format eq 'json' ) {
         eval { $value = JSON->new->decode($from); };
         croak $@ if $@;
+
         if ( (keys %$value) == 1 ) {
             my ($k => $v) = %$value;
             if (not $k =~ /^(timestamp|message|institution|document)$/ and ref($v) eq 'HASH') {
                 ($root, $value) = (ucfirst($k), $v);
             }
         }
+
+        # outdated variants
+        $root = "Response" if $root eq 'Daia';
+        delete $value->{'xmlns:xsi'};
+
         delete $value->{schema} if $root eq 'Response'; # ignore schema attribute
+
+        croak "JSON does not contain DAIA elements" unless $value;
+        push @objects, eval('DAIA::'.$root.'->new( $value )');  ##no critic
+        croak $@ if $@;
+
     } else {
         croak "Unknown DAIA serialization format $format";
     }
 
-    croak "DAIA serialization is empty (maybe you forgot the XML namespace?)" unless $value;
-    my $object = eval 'DAIA::'.$root.'->new( $value )';  ##no critic
-    croak $@ if $@;
-
-    return $object;    
+    return if not wantarray and @objects > 1;
+    return wantarray ? @objects : $objects[0];
 }
 
 =head2 guess ( $string )
@@ -436,10 +403,58 @@ sub guess {
 =head2 is_uri ( $value )
 
 Checks whether the value is a well-formed URI. This function is imported from
-L<Data::Validate::URI> into the namespace of this package as C<DAIA::is_uri>
-and can be exported into the default namespace on request.
+L<Data::Validate::URI> into the namespace of this package as C<DAIA::is_uri>.
+On request it can be exported into the default namespace.
 
 =cut
+
+#### internal methods (subject to be changed)
+
+my $NSEXPDAIA = qr/{http:\/\/(ws.gbv.de|purl.org\/ontology)\/daia\/}(.*)/;
+
+# =head1 daia_xml_roots ( $xml )
+#
+# This internal method is passed a hash reference as parsed by L<XML::Simple>
+# and traverses the XML tree to find the first DAIA element(s). It is needed
+# if DAIA/XML is wrapped in other XML structures.
+#
+# =cut
+
+sub daia_xml_roots {
+    my $xml = shift; # hash reference
+    my $out = { };
+
+    return { } unless UNIVERSAL::isa($xml,'HASH');
+
+    foreach my $key (keys %$xml) {
+        my $value = $xml->{$key};
+
+        if ( $key =~ /^{([^}]*)}(.*)/ and !($key =~ $NSEXPDAIA) ) {
+            # non DAIA element
+            my $children = UNIVERSAL::isa($value,'ARRAY') ? $value : [ $value ];
+            @$children = grep {defined $_} map { daia_xml_roots($_) } @$children;
+            foreach my $n (@$children) {
+                while ( my ($k,$v) = each(%{$n}) ) {
+                    next if $k =~ /^xmlns/;
+                    $v = [$v] unless UNIVERSAL::isa($v,'ARRAY');
+                    if ($out->{$k}) {
+                        push @$v, (UNIVERSAL::isa($out->{$k},'ARRAY') ? 
+                                   @{$out->{$k}} : $out->{$k});
+                    }
+                    # filter out scalars
+                    @$v = grep {ref($_)} @$v unless $k =~ $NSEXPDAIA;
+                    if (@$v) {
+                        $out->{$k} = (@$v > 1 ? $v : $v->[0]); 
+                    }
+                }
+            }
+        } else { # DAIA element or element without namespace
+            $out->{$key} = $value;
+        }
+    }
+
+    return $out;
+}
 
 # filter out non DAIA XML elements and 'xmlns' attributes
 sub _filter_xml { 
@@ -450,9 +465,9 @@ sub _filter_xml {
     my (@del,%add);
     foreach my $key (keys %$xml) {
         if ($key =~ /^{([^}]*)}(.*)/) {
-            if ($1 eq "http://ws.gbv.de/daia/") {
-                #%add{$2} = 
-                $xml->{$2} = $xml->{$key};
+            my $local = $2;
+            if ($1 =~ /^http:\/\/(ws.gbv.de|purl.org\/ontology)\/daia\/$/) {
+                $xml->{$local} = $xml->{$key};
             }
             push @del, $key;
         } elsif ($key =~ /^xmlns/ or $key =~ /:/) {
@@ -469,11 +484,72 @@ sub _filter_xml {
 
 1;
 
+=head1 DAIA Server hints
+
+DAIA server scripts can be tested on command line by providing HTTP
+parameters as C<key=value> pairs.
+
+It is recommended to run a DAIA server via L<mod_perl> or FastCGI so
+it does not need to be compiled each time it is run. For mod_perl you
+simply put your script in a directory which C<PerlResponseHandler> has
+been set for (for instance to L<Apache::Registry> or L<ModPerl::PerlRun>).
+
+For FastCGI you need to install L<FCGI> and set the CGI handler to
+L<AddHandler fcgid-script .pl> in C<.htaccess>. Your DAIA server must
+consist of an initialization section and a response loop:
+
+  #!/usr/bin/perl
+  use DAIA;
+  use CGI::Fast;
+
+  # ...initialization section, which is executed only once ...
+
+  while (my $q = new CGI::Fast) { # response loop
+      my $id = $q->param('id');
+
+      # ... create response ...
+     
+      $response->serve( cgi => $q, exitif => 0 );
+  }
+
+The C<serve> methods needs a C<cgi> or C<format> parameter and it is
+been told not to exit the script. It is recommended to check every
+given timespan whether the script has been modified and restart in
+this case:
+
+  #!/usr/bin/perl
+  use DAIA;
+  use CGI::Fast;
+
+  my $started = time;
+  my $thisscript = $0;
+  my $lastmod = (stat($thisscript))[9] # mtime;
+
+  sub restart {
+      return 0 if time - $started < 10; # check every 10 seconds
+      return 1 if (stat($thisscript))[9] > $lastmod;
+  }
+
+  while (my $q = new CGI::Fast) { # response loop
+
+      # ... create response ...
+
+      $response->serve( $q, exitif => \&restart } );
+  }
+
+
 =head1 SEE ALSO
 
 Please report bugs and feature requests via L<https://rt.cpan.org/Public/Dist/Display.html?Name=DAIA>.
 The classes of this package are implemented using L<DAIA::Object> which is just another
 Perl meta-class framework.
+
+The current developer version of this package together with more DAIA
+implementations in other programming languages is availabe in a project
+at Sourceforge: L<http://sourceforge.net/projects/daia/>. Feel free to
+contribute!
+
+A specification of DAIA can be found at L<http://purl.org/NET/DAIA>.
 
 =head1 AUTHOR
 
@@ -481,7 +557,7 @@ Jakob Voss C<< <jakob.voss@gbv.de> >>
 
 =head1 LICENSE
 
-Copyright (C) 2009 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself, either Perl version 5.8.8 or, at
