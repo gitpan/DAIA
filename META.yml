@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               DAIA
-version:            0.3
+version:            0.31
 abstract:           Document Availability Information API in Perl
 author:
     - Jakob Voss <jakob.voss@gbv.de>
@@ -22,8 +22,13 @@ requires:
     IO::Scalar:           1.126
     JSON:                 2.15
     LWP::Simple:          1.4
+    Scalar::Util:         0
     URI:                  1.35
     XML::Simple:          2.14
+resources:
+    homepage:    http://purl.org/NET/DAIA
+    license:     http://dev.perl.org/licenses/
+    repository:  http://daia.sourceforge.net/
 no_index:
     directory:
         - t

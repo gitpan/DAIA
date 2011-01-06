@@ -7,7 +7,7 @@ DAIA - Document Availability Information API in Perl
 =cut
 
 use strict;
-our $VERSION = '0.3';
+our $VERSION = '0.31';
 
 =head1 DESCRIPTION
 
@@ -19,9 +19,40 @@ classes and functions to easily create and manage DAIA information. It can
 be used to implement DAIA servers, clients, and other programs that handle 
 availability information.
 
-The DAIA information objects as decriped in the DAIA specification are
-directly mapped to Perl packages. In addition a couple of functions can
-be exported if you prefer to handle DAIA data without much object-orientation.
+For a detailed description what "availability" means in context of DAIA,
+see the L<DAIA specification|http://purl.org/NET/DAIA>. This implementation
+directly maps DAIA information objects to Perl objects, that all provide 
+some L<standard methods|/"DAIA OBJECTS">. You can also let the package 
+L<export functions|/"EXPORTED FUNCTIONS"> to handle DAIA data without 
+much object-orientation.
+
+In short the most important concepts of DAIA are:
+
+=over 4
+
+=item B<documents>
+
+An abstract document (work or edition). Implemented as L<DAIA::Document>.
+
+=item B<items>
+
+A particular copy of a document (physical or digital), that services
+can be provided with. Implemented as L<DAIA::Item>.
+
+=item B<availability status>
+
+A boolean value and a service that indicates I<for what> an item is 
+available or not available. Implemented as L<DAIA::Availability> with 
+the subclasses L<DAIA::Available> and L<DAIA::Unavailable>.
+
+=item B<responses>
+
+Information about the availability of a document with a timestamp. Responses
+are used to send and recieve DAIA data. Implemented as L<DAIA::Response>.
+
+=item
+
+=back 
 
 =head1 SYNOPSIS
 
@@ -110,7 +141,7 @@ our %EXPORT_TAGS = (
     core => [qw(response document item available unavailable availability)],
     entities => [qw(institution department storage limitation)],
 );
-our @EXPORT_OK = qw(is_uri);
+our @EXPORT_OK = qw(is_uri parse guess);
 Exporter::export_ok_tags;
 $EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve', 'error'];
 Exporter::export_tags('all');
@@ -151,7 +182,7 @@ to the default namespace! Alternatively you can specify the following groups:
 
 =over 4
 
-=item :core
+=item C<:core>
 
 Includes the functions C<response> (L<DAIA::Response>),
 C<document> (L<DAIA::Document>), 
@@ -160,7 +191,7 @@ C<available> (L<DAIA::Available>),
 C<unavailable> (L<DAIA::Unavailable>), and
 C<availability> (L<DAIA::Availability>)
 
-=item :entities
+=item C<:entities>
 
 Includes the functions C<institution> (L<DAIA::Institution>),
 C<department> (L<DAIA::department>),
@@ -210,11 +241,13 @@ sub serve {
 
 =head1 ADDITIONAL FUNCTIONS
 
-The following functions are not exportted but you can call both them as 
+The following functions are not exported but you can call both them as 
 function and as method:
 
   DAIA->parse_xml( $xml );
   DAIA::parse_xml( $xml );
+
+On request you can export the functions C<guess> and C<parse>.
 
 =head2 parse_xml( $xml )
 
@@ -249,8 +282,8 @@ sub parse_json {
 Parse DAIA/XML or DAIA/JSON from a file or string. You can specify the source
 as filename, string, or L<IO::Handle> object as first parameter or with the
 named C<from> parameter. Alternatively you can either pass a filename or URL with
-parameter C<file> or a string with parameter C<data>. If the filename is an URL,
-its content will be fetched via HTTP. The C<format> parameter (C<json> or C<xml>)
+parameter C<file> or a string with parameter C<data>. If C<from> or C<file> is an
+URL, its content will be fetched via HTTP. The C<format> parameter (C<json> or C<xml>)
 is required unless the format can be detected automatically the following way:
 
 =over
@@ -265,18 +298,23 @@ A scalar starting with C<{> and ending with C<}> is parsed as DAIA/JSON.
 
 =item *
 
-A scalar ending with C<.json> is parsed as DAIA/JSON.
+A scalar starting with C<http://> or C<https://> is used to fetch data via HTTP.
+The resulting data is interpreted as DAIA/XML or DAIA/JSON.
 
 =item *
 
-A scalar ending with C<.xml> is is parsed as DAIA/XML.
+A scalar ending with C<.json> is parsed as DAIA/JSON file.
+
+=item *
+
+A scalar ending with C<.xml> is is parsed as DAIA/XML file.
 
 =back
 
 Normally this function or method returns a single DAIA object. When parsing 
 DAIA/XML it may also return a list of objects. It is recommended to always
 expect a list unless you are absolutely sure that the result of parsing will
-be a single DAIA object!
+be a single DAIA object.
 
 =cut
 
@@ -287,6 +325,7 @@ sub parse {
     $from = $param{data} unless defined $from;
     my $format = lc($param{format});
     my $file = $param{file};
+    $file = $from if defined $from and $from =~ /^http(s)?:\/\//;
     if (not defined $file and defined $from and not defined $param{data}) {
         if( ref($from) eq 'GLOB' or UNIVERSAL::isa($from, 'IO::Handle')) {
             $file = $from;
@@ -404,7 +443,33 @@ sub guess {
 
 Checks whether the value is a well-formed URI. This function is imported from
 L<Data::Validate::URI> into the namespace of this package as C<DAIA::is_uri>.
-On request it can be exported into the default namespace.
+On request the function can be exported into the default namespace.
+
+=head1 DAIA OBJECTS
+
+All objects (documents, items, availability, status, institutions, departments,
+limitations, storages, messages, errors) are implemented as subclass of
+L<DAIA::Object>. Therefore, all objects have the following methods:
+
+=over 4
+
+=item C<new>
+
+Constructs a new object.
+
+=item C<add>
+
+Adds typed properties.
+
+=item C<xml>, C<struct>, C<json>, C<rdfhash>
+
+Returns several serialization forms.
+
+=item C<serve>
+
+Serialize the object and send it to STDOUT with the appropriate HTTP headers.
+
+=back
 
 =cut
 
