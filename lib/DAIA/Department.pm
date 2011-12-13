@@ -1,31 +1,44 @@
+﻿use strict;
+use warnings;
 package DAIA::Department;
+{
+  $DAIA::Department::VERSION = '0.35';
+}
+#ABSTRACT: Information about a department in a L<DAIA::Institution>
+
+use base 'DAIA::Entity';
+our %PROPERTIES = %DAIA::Entity::PROPERTIES;
+
+sub rdftype { 'http://www.w3.org/ns/org#Organization' }
+
+1;
+
+
+__END__
+=pod
 
 =head1 NAME
 
 DAIA::Department - Information about a department in a L<DAIA::Institution>
 
-=cut
+=head1 VERSION
 
-use strict;
-use base 'DAIA::Entity';
-our $VERSION = '0.27';
-our %PROPERTIES = %DAIA::Entity::PROPERTIES;
+version 0.35
 
-1;
+=head1 DESCRIPTION
 
-=head1 PROPERTIES AND METHODS
-
-See L<DAIA::Entity> for a desciption of all properties and methods.
+See L<DAIA::Entity> which DAIA::Department is a subclass of.
 
 =head1 AUTHOR
 
-Jakob Voss C<< <jakob.voss@gbv.de> >>
+Jakob Voss
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+This software is copyright (c) 2011 by Jakob Voss.
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.8.8 or, at
-your option, any later version of Perl 5 you may have available.
-option, any later version of Perl 5 you may have available.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+

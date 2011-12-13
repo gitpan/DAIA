@@ -1,21 +1,156 @@
 package DAIA::Item;
+{
+  $DAIA::Item::VERSION = '0.35';
+}
+#ABSTRACT: Holds information about an item of a L<DAIA::Document>
+
+use strict;
+use base 'DAIA::Object';
+
+use DAIA;
+use JSON;
+
+
+our %PROPERTIES = (
+    id          => $DAIA::Object::COMMON_PROPERTIES{id},
+    href        => $DAIA::Object::COMMON_PROPERTIES{href},
+    message     => $DAIA::Object::COMMON_PROPERTIES{message},
+    error       => $DAIA::Object::COMMON_PROPERTIES{error},
+    fragment    => { # xs:boolean
+        filter => sub {
+            return unless defined $_[0];
+            return ($_[0] and not lc($_[0]) eq 'false') ? $JSON::true : $JSON::false;
+            return;
+        }
+    },
+    label       => {
+        default => '',
+        filter => sub { # label can be specified as array or as element
+            my $v = (ref($_[0]) eq 'ARRAY') ? $_[0]->[0] : $_[0]; 
+            return "$v";
+        },
+    },
+    department  => { type => 'DAIA::Department' },
+    storage     => { type => 'DAIA::Storage' },
+    available   => { type => 'DAIA::Available', repeatable => 1 }, 
+    unavailable => { type => 'DAIA::Unavailable', repeatable => 1 },
+);
+
+
+sub addAvailability {
+    my $self = shift;
+    return $self unless @_ > 0;
+    return $self->add(
+        UNIVERSAL::isa( $_[0], 'DAIA::Availability' ) 
+          ? $_[0] 
+          : DAIA::Availability->new( @_ )
+    );
+}
+
+*addService = *addAvailability;
+
+
+sub services {
+    my $self = shift;
+
+    my %wanted = map { $_ => 1 }
+                 map { $DAIA::Availability::SECIVRES{$_} ? 
+                       $DAIA::Availability::SECIVRES{$_} : $_ } @_;
+
+    my %services;
+    foreach my $a ( ($self->available, $self->unavailable) ) {
+        my $s = $a->service;
+        next if %wanted and not $wanted{$s};
+        if ( $services{$s} ) {
+            push @{ $services{$s} }, $a;
+        } else {
+            $services{$s} = [ $a ];
+        }
+    }
+
+    return %services;
+}
+
+sub rdfhash {
+    my $self = shift;
+    my $me = { };
+
+    $me->{'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'} = [{
+        type => 'uri', value => 'http://purl.org/vocab/frbr/core#Item',
+    }];
+
+    $me->{'http://xmlns.com/foaf/0.1/page'} = [{
+        value => $self->{href}, type => "uri"
+    }] if $self->{href};
+
+    $me->{'http://purl.org/dc/terms/description'} = [
+        map { $_->rdfhash } @{$self->{message}}
+    ] if $self->{message};
+
+    $me->{'http://purl.org/ontology/daia/label'} = [{
+        type => 'literal', value => $self->{label}
+    }] if $self->{label};
+
+    my $rdf = { };
+
+    # TODO: fragment/broader
+    # department  => { type => 'DAIA::Department' }
+    
+    if ($self->{storage}) {
+        my $storage = $self->{storage}->rdfhash;
+        if ( $storage->{type} ) { # plain literal
+            $me->{'http://purl.org/dc/terms/spatial'} = [$storage];
+        } else {
+            my ($uri => $data) = %$storage;
+            $rdf->{$uri} = $data;
+            $me->{'http://purl.org/dc/terms/spatial'} = [{
+                type => 'uri', value => $uri
+            }];
+        }
+        my $r = $self->{storage}->rdfhash;
+    }
+
+    if ($self->{available}) {
+        foreach my $s ( @{$self->{available}} ) {
+            my $r = $s->rdfhash;
+            $rdf->{$_} = $r->{$_} for keys %$r;
+        }
+        $me->{'http://purl.org/ontology/daia/availableFor'} = [
+            map { { type => 'uri', value => $_->rdfuri } } @{$self->{available}}
+        ];
+        # TODO: providedBy
+    }
+    if ($self->{unavailable}) {
+        foreach my $s ( @{$self->{unavailable}} ) {
+            my $r = $s->rdfhash;
+            $rdf->{$_} = $r->{$_} for keys %$r;
+        }
+        $me->{'http://purl.org/ontology/daia/unavailableFor'} = [
+            map { { type => 'uri', value => $_->rdfuri } } @{$self->{unavailable}}
+        ];
+        # TODO: providedBy
+    }
+
+    $rdf->{ $self->rdfuri } = $me;
+    return $rdf;
+}
+
+1;
+
+__END__
+=pod
 
 =head1 NAME
 
 DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
-=cut
+=head1 VERSION
 
-use strict;
-use base 'DAIA::Object';
-our $VERSION = '0.30';
-
-use DAIA;
-use JSON;
+version 0.35
 
 =head1 PROPERTIES
 
-=over 
+=over
 
 =item id
 
@@ -59,32 +194,6 @@ be performed with this item.
 An optional list of L<DAIA::Unavailable> objects with unavailable services 
 that can (currently or in general) not be performed with this item.
 
-=cut
-
-our %PROPERTIES = (
-    id          => $DAIA::Object::COMMON_PROPERTIES{id},
-    href        => $DAIA::Object::COMMON_PROPERTIES{href},
-    message     => $DAIA::Object::COMMON_PROPERTIES{message},
-    fragment    => { # xs:boolean
-        filter => sub {
-            return unless defined $_[0];
-            return ($_[0] and not lc($_[0]) eq 'false') ? $JSON::true : $JSON::false;
-            return;
-        }
-    },
-    label       => {
-        default => '',
-        filter => sub { # label can be specified as array or as element
-            my $v = (ref($_[0]) eq 'ARRAY') ? $_[0]->[0] : $_[0]; 
-            return "$v";
-        }
-    },
-    department  => { type => 'DAIA::Department' },
-    storage     => { type => 'DAIA::Storage' },
-    available   => { type => 'DAIA::Available', repeatable => 1 },
-    unavailable => { type => 'DAIA::Unavailable', repeatable => 1 },
-);
-
 =head1 METHODS
 
 =head2 Standard methods
@@ -118,20 +227,6 @@ Add a given or a new L<DAIA::Availability> (alias for addAvailability).
 
 =back
 
-=cut
-
-sub addAvailability {
-    my $self = shift;
-    return $self unless @_ > 0;
-    return $self->add(
-        UNIVERSAL::isa( $_[0], 'DAIA::Availability' ) 
-          ? $_[0] 
-          : DAIA::Availability->new( @_ )
-    );
-}
-
-*addService = *addAvailability;
-
 =head2 Additional query methods
 
 =over
@@ -145,39 +240,16 @@ URI or by its short name), you only get those services.
 
 =back
 
-=cut
-
-sub services {
-    my $self = shift;
-
-    my %wanted = map { $_ => 1 }
-                 map { $DAIA::Availability::SECIVRES{$_} ? 
-                       $DAIA::Availability::SECIVRES{$_} : $_ } @_;
-
-    my %services;
-    foreach my $a ( ($self->available, $self->unavailable) ) {
-        my $s = $a->service;
-        next if %wanted and not $wanted{$s};
-        if ( $services{$s} ) {
-            push @{ $services{$s} }, $a;
-        } else {
-            $services{$s} = [ $a ];
-        }
-    }
-
-    return %services;
-}
-
-1;
-
 =head1 AUTHOR
 
-Jakob Voss C<< <jakob.voss@gbv.de> >>
+Jakob Voss
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+This software is copyright (c) 2011 by Jakob Voss.
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.8.8 or, at
-your option, any later version of Perl 5 you may have available.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+

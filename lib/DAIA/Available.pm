@@ -1,8 +1,36 @@
 package DAIA::Available;
+{
+  $DAIA::Available::VERSION = '0.35';
+}
+#ABSTRACT: Information about a service that is currently unavailable
+
+
+use strict;
+use base 'DAIA::Availability';
+
+
+our %PROPERTIES = (
+    %DAIA::Availability::PROPERTIES,
+    delay => { 
+        filter => sub {
+            return 'unknown' if lc("$_[0]") eq 'unknown';
+            return DAIA::Availability::normalize_duration( $_[0] );
+        },
+    }
+);
+
+1;
+
+__END__
+=pod
 
 =head1 NAME
 
 DAIA::Available - Information about a service that is currently unavailable
+
+=head1 VERSION
+
+version 0.35
 
 =head1 DESCRIPTION
 
@@ -10,12 +38,6 @@ This class is derived from L<DAIA::Availability> - see that class for details.
 In addition there is the property C<delay> that holds an XML Schema duration
 value or the special value C<unknown>.  Obviously the C<status> property of
 a C<DAIA::Unavailable> object is always C<1>.
-
-=cut
-
-use strict;
-use base 'DAIA::Availability';
-our $VERSION = '0.28';
 
 =head1 PROPERTIES
 
@@ -41,28 +63,16 @@ function that can be exported on request.
 
 =back
 
-=cut
-
-our %PROPERTIES = (
-    %DAIA::Availability::PROPERTIES,
-    delay => { 
-        filter => sub {
-            return 'unknown' if lc("$_[0]") eq 'unknown';
-            return DAIA::Availability::normalize_duration( $_[0] );
-        }
-    }
-);
-
-1;
-
 =head1 AUTHOR
 
-Jakob Voss C<< <jakob.voss@gbv.de> >>
+Jakob Voss
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+This software is copyright (c) 2011 by Jakob Voss.
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.8.8 or, at
-your option, any later version of Perl 5 you may have available.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+

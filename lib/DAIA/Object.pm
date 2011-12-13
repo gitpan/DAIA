@@ -1,13 +1,10 @@
 package DAIA::Object;
-
-=head1 NAME
-
-DAIA::Object - Abstract base class of all DAIA classes
-
-=cut
+{
+  $DAIA::Object::VERSION = '0.35';
+}
+#ABSTRACT: Abstract base class of all DAIA classes
 
 use strict;
-our $VERSION = '0.30';
 use Carp::Clan;
 use CGI; # TODO: allow other kind of CGI
 use Data::Validate::URI qw(is_uri is_web_uri);
@@ -20,32 +17,6 @@ our $AUTOLOAD;
 our @HIDDEN_PROPERTIES = 
     qw(to format xmlns cgi header xmlheader xslt pi callback exitif noutf8);
 
-=head1 DESCRIPTION
-
-This package implements just another Perl meta-class framework. Just
-ignore it unless you have a clue what "meta-class framework" could 
-mean. Some concepts are borrowed from the mighty L<Moose> object system
-but this framework is much smaller. Maybe you should better have a look 
-at Moose and stop reading now.
-
-In a nutshell C<DAIA::Object> handles all method calls via AUTOLOAD.
-Each derived package must provide a C<%PROPERTIES> hash that defines
-an object's attributes. Each property is defined by a hash that must
-either contain a C<type> value pointing to a class name (typed property)
-or a C<filter> value containing a plain value ar a filter method (untyped
-property).
-
-=head1 METHDOS
-
-=head2 new ( ..attributes... )
-
-Constructs a new DAIA object of the derived type. Unknown properties are 
-ignored. In addition the following special properties are stored as hidden
-properties, that will not be copied to other objects, but only used for 
-serializing the object: C<to>, C<format>, C<cgi>, C<header>, C<xmlheader>, 
-C<xmlns>, C<xslt>, C<pi>, C<callback>, C<exitif>.
-
-=cut
 
 sub new {
     my $class = shift;
@@ -90,11 +61,6 @@ sub new {
     return $self;
 }
 
-=head2 add ( ... )
-
-Adds typed properties to an object.
-
-=cut
 
 sub add {
     my $self = shift;
@@ -122,21 +88,6 @@ sub add {
     }
 }
 
-=head2 Serialization methods
-
-A DAIA object can be serialized by the following methods:
-
-=head3 xml ( [ xmlns => 0|1 ] [ xslt => $xslt ] [ header => 0|1 ] [ pi => $pi ] )
-
-Returns the object in DAIA/XML. With the C<xmlns> as parameter you can 
-specify that a namespace declaration is added (disabled by default 
-unless you enable xslt or header). With C<xslt> you can add an XSLT 
-processing instruction and with C<pi> any other processing instructions.
-If you enable C<header>, an XML-header is prepended.
-
-All TODO
-
-=cut
 
 sub xml {
     my ($self, %param) = @_;
@@ -165,13 +116,6 @@ sub xml {
     return $xml;
 }
 
-=head3 struct ( [ $json ] )
-
-Returns the object as unblessed Perl data structure. If you specify a true parameter,
-only boolean values will be kept as blessed C<JSON::Boolean> objects (see L<JSON>).
-The C<label> property will only be included unless it is not the empty string.
-
-=cut
 
 sub struct {
     my ($self, $json) = @_;
@@ -193,14 +137,6 @@ sub struct {
     return $struct;
 }
 
-=head3 json ( [ $callback ] )
-
-Returns the object in DAIA/JSON, optionally wrapped by a JavaScript callback 
-function call. Invalid callback names are ignored without warning. The hidden
-property C<callback> is used if no callback parameter is provided, use C<undef>
-to fully disable the callback.
-
-=cut
 
 sub json {
     my ($self, $callback) = @_;
@@ -214,84 +150,11 @@ sub json {
     }
 }
 
-=head3 rdfhash
-
-Returns the object as hashref representing an RDF structure. This hashref 
-structure is compatible with RDF/JSON and with the ARC2 library for PHP.
-You can directly pass it the method C<add_hashref> of L<RDF::Trine::Model>.
-
-The current version does not implement this method yet!
-
-=cut
 
 sub rdfhash {
-     my $self = shift;
-
-#     my $data = $self->struct;
-#     my $hashref;
-
-     my $id = $self->{id} ? $self->{id} : "_:".refaddr($self);
-
-     my $type = ref($self); 
-     $type =~ s/^DAIA:://;
-     $type = "http://purl.org/ontology/daia/$type";
-
-     return { $id => {
-         'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' => [ {
-             type => 'uri', value => $type
-         } ]
-     } };
+    return { };
 }
 
-=head2 serve ( [ [ format => ] $format | [ cgi => $CGI ] ] [ %more_options ] )
-
-Serialize the object and send it to STDOUT or a another stream with the 
-appropriate HTTP headers. This method is available for all DAIA objects but
-mostly used to serve a L<DAIA::Response>. The serialized object must already
-be encoded in UTF-8 (but it can contain Unicode strings).
-
-The serialization format can be specified with the first parameter as
-C<format> string (C<json> or C<xml>) or C<cgi> object. If no format is
-given, it is searched for in the L<CGI> query parameters. The default 
-format is C<xml>. Other possible options are:
-
-=over
-
-=item header
-
-Print HTTP headers (default). Use C<header =E<gt> 0> to disable headers.
-
-=head xmlheader
-
-Print the XML header of XML format is used. Enabled by default.
-
-=item xslt
-
-Add a link to the given XSLT stylesheet if XML format is used.
-
-=item pi
-
-Add one or more processing instructions if XML format is used.
-
-=item callback
-
-Add this JavaScript callback function in JSON format. If no callback
-function is specified, it is searched for in the CGI query parameters.
-You can disable callback support by setting C<callback =E<gt> undef>.
-
-=item to
-
-Serialize to a given stream (L<IO::Handle>, GLOB, or string reference)
-instead of STDOUT. You may also want to set C<exitif> if you use
-this option.
-
-=item exitif
-
-By setting this method to a true value you make it to exit the program.
-you provide a method, the method is called and the script exits if only
-if the return value is true.
-
-=cut
 
 sub serve {
     my $self = shift;
@@ -342,20 +205,18 @@ sub serve {
     exit if $attr{'exitif'};
 }
 
-=head1 INTERNAL METHODS
 
-The following methods are only used internally; don't directly
-call or modify them unless you want to damage data integrity or 
-to fix a bug!
+sub rdfuri {
+     my $self = shift;
+     return $self->{id} if $self->{id};
+     my $id = lc(ref($self)).refaddr($self);
+     $id =~ s/.*::/_:/;
+     return $id;
+}
 
-=cut
+sub rdftype { }
 
-=head2 AUTOLOAD
 
-Called if an unknown method is called. Almost all method calls go through
-this magic method. Thanks, AUTOLOAD, thanks Perl.
-
-=cut
 
 sub AUTOLOAD {
     my $self = shift;
@@ -451,8 +312,9 @@ sub AUTOLOAD {
 
     } else { 
         # set an untyped value (never repeatable, stringified unless filtered)
-
-        if( $opt->{filter} ) {
+        if( $opt->{fixed} ) {
+            $value = $opt->{fixed};
+        } elsif( $opt->{filter} ) {
             $value = $opt->{filter}( @_ );
             croak "$class->$property did not pass value constraint: " . join(',',@_)
                 unless defined $value;
@@ -466,12 +328,6 @@ sub AUTOLOAD {
     $self; # if called as setter, return the object for chaining
 }
 
-=head2 xml_write ( $roottag, $content, $level )
-
-Simple, adopted XML::Simple::XMLOut replacement with support of element order 
-and special treatment of C<label> elements.
-
-=cut
 
 sub xml_write {
     my ($name, $struct, $level) = @_;
@@ -523,11 +379,6 @@ sub xml_write {
     return join("\n", @lines);
 }
 
-=head2 xml_escape_value ( $string )
-
-Escape special XML characters.
-
-=cut
 
 sub xml_escape_value {
     my($data) = @_;
@@ -539,11 +390,6 @@ sub xml_escape_value {
     return $data;
 }
 
-=head2 _buildargs
-
-Returns a property-value hash of constructor parameters.
-
-=cut
 
 sub _buildargs {
     shift; 
@@ -551,11 +397,6 @@ sub _buildargs {
     @_; 
 };
 
-=head2 _hidden_prop ( $hashref )
-
-Enrich a hash with hidden properties.
-
-=cut
 
 sub _hidden_prop {
     my $self = shift;
@@ -568,12 +409,6 @@ sub _hidden_prop {
     }
 }
 
-=head2 _enable_utf8_layer
-
-Enable :utf8 layer for a given filehandle unless it or some
-other encoding has already been enabled.
-
-=cut
 
 sub _enable_utf8_layer {
     my $fh = shift;
@@ -586,6 +421,8 @@ sub _enable_utf8_layer {
 
 
 # some constants
+our $RDFNAMESPACE = 'http://purl.org/ontology/daia/';
+
 our %COMMON_PROPERTIES =( 
     id => {
         filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_uri($v) ? $v : undef; }
@@ -594,24 +431,150 @@ our %COMMON_PROPERTIES =(
 #        filter => sub { my $v = "$_[0]"; $v =~ s/^\s+|\s$//g; is_web_uri($v) ? $v : undef; }
 #    },
     href => { 
-        filter => sub { my $v = "$_[0]"; is_web_uri($v) ? $v : undef; }
+        filter => sub { my $v = "$_[0]"; is_web_uri($v) ? $v : undef; },
+        predicate => 'http://xmlns.com/foaf/0.1/page',
+        rdftype => 'resource'
     },
     message => { 
         type => 'DAIA::Message',
-        repeatable => 1
+        repeatable => 1,
+        predicate => 'http://purl.org/dc/terms/description',
     },
+    error => {
+        type => 'DAIA::Error',
+        repeatable => 1,
+        predicate => $DAIA::Object::RDFNAMESPACE.'hasError'
+    }
 );
 
 1;
 
+__END__
+=pod
+
+=head1 NAME
+
+DAIA::Object - Abstract base class of all DAIA classes
+
+=head1 VERSION
+
+version 0.35
+
+=head1 DESCRIPTION
+
+This package implements just another Perl meta-class framework. Just
+ignore it unless you have a clue what "meta-class framework" could 
+mean. Some concepts are borrowed from the mighty L<Moose> object system
+but this framework is much smaller. Maybe you should better have a look 
+at Moose and stop reading now.
+
+In a nutshell C<DAIA::Object> handles all method calls via AUTOLOAD.
+Each derived package must provide a C<%PROPERTIES> hash that defines
+an object's attributes. Each property is defined by a hash that must
+either contain a C<type> value pointing to a class name (typed property),
+or a C<filter> value containing a plain value, or a filter method 
+(untyped property).
+
+=head1 METHDOS
+
+=head2 new ( ..attributes... )
+
+Constructs a new DAIA object of the derived type. Unknown properties are 
+ignored. In addition the following special properties are stored as hidden
+properties, that will not be copied to other objects, but only used for 
+serializing the object: C<to>, C<format>, C<cgi>, C<header>, C<xmlheader>, 
+C<xmlns>, C<xslt>, C<pi>, C<callback>, C<exitif>.
+
+=head2 add ( ... )
+
+Adds typed properties to an object.
+
+=head2 Serialization methods
+
+A DAIA object can be serialized by the following methods:
+
+=head3 xml ( [ xmlns => 0|1 ] [ xslt => $xslt ] [ header => 0|1 ] [ pi => $pi ] )
+
+Returns the object in DAIA/XML. With the C<xmlns> as parameter you can 
+specify that a namespace declaration is added (disabled by default 
+unless you enable xslt or header). With C<xslt> you can add an XSLT 
+processing instruction and with C<pi> any other processing instructions.
+If you enable C<header>, an XML-header is prepended.
+
+All TODO
+
+=head3 struct ( [ $json ] )
+
+Returns the object as unblessed Perl data structure. If you specify a true parameter,
+only boolean values will be kept as blessed C<JSON::Boolean> objects (see L<JSON>).
+The C<label> property will only be included unless it is not the empty string.
+
+=head3 json ( [ $callback ] )
+
+Returns the object in DAIA/JSON, optionally wrapped by a JavaScript callback 
+function call. Invalid callback names are ignored without warning. The hidden
+property C<callback> is used if no callback parameter is provided, use C<undef>
+to fully disable the callback.
+
+=head3 rdfhash 
+
+Returns the object as hashref representing an RDF structure. This hashref 
+structure is compatible with RDF/JSON and with the ARC2 library for PHP
+You can directly pass it the method C<add_hashref> of L<RDF::Trine::Model>.
+
+=head2 serve
+
+Serialize the object and send it to STDOUT with the appropriate HTTP headers.
+See L<DAIA/"DAIA OBJECTS"> for details.
+
+=head2 rdfuri
+
+Returns the URI of this object, which is either an URI (the C<id> property),
+or a blank node identifier, that starts with "C<_:>".
+
+=head1 INTERNAL METHODS
+
+The following methods are only used internally; don't directly
+call or modify them unless you want to damage data integrity or 
+to fix a bug!
+
+=head2 AUTOLOAD
+
+Called if an unknown method is called. Almost all method calls go through
+this magic method. Thanks, AUTOLOAD, thanks Perl.
+
+=head2 xml_write ( $roottag, $content, $level )
+
+Simple, adopted XML::Simple::XMLOut replacement with support of element order 
+and special treatment of C<label> elements.
+
+=head2 xml_escape_value ( $string )
+
+Escape special XML characters.
+
+=head2 _buildargs
+
+Returns a property-value hash of constructor parameters.
+
+=head2 _hidden_prop ( $hashref )
+
+Enrich a hash with hidden properties.
+
+=head2 _enable_utf8_layer
+
+Enable :utf8 layer for a given filehandle unless it or some
+other encoding has already been enabled.
+
 =head1 AUTHOR
 
-Jakob Voss C<< <jakob.voss@gbv.de> >>
+Jakob Voss
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+This software is copyright (c) 2011 by Jakob Voss.
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.8.8 or, at
-your option, any later version of Perl 5 you may have available.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+

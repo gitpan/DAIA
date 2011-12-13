@@ -1,15 +1,80 @@
+use strict;
+use warnings;
 package DAIA::Document;
+{
+  $DAIA::Document::VERSION = '0.35';
+}
+#ABSTRACT: Information about a single document
+
+use base 'DAIA::Object';
+use Carp 'croak';
+
+our %PROPERTIES = (
+    id      => { 
+        filter => $DAIA::Object::COMMON_PROPERTIES{id}->{filter},
+        default => sub { croak 'DAIA::Document->id is required' }
+    },
+    href    => $DAIA::Object::COMMON_PROPERTIES{href},
+    message => $DAIA::Object::COMMON_PROPERTIES{message},
+    error   => $DAIA::Object::COMMON_PROPERTIES{error},
+    item    => { 
+        type      => 'DAIA::Item', repeatable => 1,
+    }
+);
+
+sub rdftype { 'http://purl.org/ontology/bibo/Document' }
+
+sub rdfhash {
+    my $self = shift;
+
+    my $me = { 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' => [{
+        type => 'uri', value => $self->rdftype
+    }] };
+
+    $me->{'http://xmlns.com/foaf/0.1/page'} = [{
+        value => $self->{href}, type => "uri"
+    }] if $self->{href};
+
+    $me->{'http://purl.org/dc/terms/description'} = [
+        map { $_->rdfhash } @{$self->{message}}
+    ] if $self->{message};
+
+    $me->{'http://purl.org/dc/terms/description'} = [
+        map { $_->rdfhash } @{$self->{error}}
+    ] if $self->{error};
+
+    my $rdf = { };
+    if ($self->{item}) {
+        foreach my $item (@{$self->{item}}) {
+            my $r = $item->rdfhash;
+            $rdf->{$_} = $r->{$_} for keys %$r;
+        }
+        # TODO: exemplar / partial / broader
+        # daia:extractOf / daia:partOf
+        $me->{'http://purl.org/ontology/daia/exemplar'} = [ map {
+            my $iri = $_->rdfuri;
+            { value => $iri, type => ($iri =~ /^_:/) ? 'bnode' : 'uri' }
+        } @{$self->{item}} ];
+    }
+    
+    $rdf->{ $self->rdfuri } = $me;
+
+    return $rdf;
+}
+ 
+1;
+
+
+__END__
+=pod
 
 =head1 NAME
 
 DAIA::Document - Information about a single document
 
-=cut
+=head1 VERSION
 
-use strict;
-use base 'DAIA::Object';
-our $VERSION = '0.27';
-use Carp qw(croak);
+version 0.35
 
 =head1 PROPERTIES
 
@@ -36,22 +101,6 @@ the C<message> accessor, with C<addMessage>, and with C<provideMessage>.
 An optional list of L<DAIA::Item> objects with instances/copies/holdings 
 of this document.
 
-=back
-
-=cut
-
-our %PROPERTIES = (
-    id      => { 
-        filter => $DAIA::Object::COMMON_PROPERTIES{id}->{filter},
-        default => sub { croak 'DAIA::Document->id is required' }
-    },
-    href    => $DAIA::Object::COMMON_PROPERTIES{href},
-    message => $DAIA::Object::COMMON_PROPERTIES{message},
-    item    => { type => 'DAIA::Item', repeatable => 1 }
-);
-
-1;
-
 =head1 METHODS
 
 DAIA::Document provides the default methods of L<DAIA::Object>, accessor 
@@ -67,12 +116,14 @@ Add a specified or a new L<DAIA::Item>.
 
 =head1 AUTHOR
 
-Jakob Voss C<< <jakob.voss@gbv.de> >>
+Jakob Voss
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Verbundzentrale Goettingen (VZG) and Jakob Voss
+This software is copyright (c) 2011 by Jakob Voss.
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.8.8 or, at
-your option, any later version of Perl 5 you may have available.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
