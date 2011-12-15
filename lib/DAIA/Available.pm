@@ -1,13 +1,12 @@
+use strict;
+use warnings;
 package DAIA::Available;
 {
-  $DAIA::Available::VERSION = '0.35';
+  $DAIA::Available::VERSION = '0.4';
 }
 #ABSTRACT: Information about a service that is currently unavailable
 
-
-use strict;
 use base 'DAIA::Availability';
-
 
 our %PROPERTIES = (
     %DAIA::Availability::PROPERTIES,
@@ -21,6 +20,7 @@ our %PROPERTIES = (
 
 1;
 
+
 __END__
 =pod
 
@@ -30,7 +30,7 @@ DAIA::Available - Information about a service that is currently unavailable
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 DESCRIPTION
 

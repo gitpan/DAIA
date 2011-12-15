@@ -1,6 +1,8 @@
+use strict;
+use warnings;
 package DAIA::Object;
 {
-  $DAIA::Object::VERSION = '0.35';
+  $DAIA::Object::VERSION = '0.4';
 }
 #ABSTRACT: Abstract base class of all DAIA classes
 
@@ -156,6 +158,40 @@ sub rdfhash {
 }
 
 
+sub serialize {
+    my ($self, $format) = @_;
+    return unless $format and grep { $_ eq $format } DAIA->formats;
+
+    my $content = ''; 
+
+    if ($format eq 'xml') {
+        $content = $self->xml(xmnls => 1);
+    } elsif ($format eq 'json') {
+        $content = $self->json;
+    } elsif ($format eq 'rdfjson') {
+        $content = JSON->new->pretty->encode($self->rdfhash());
+    } elsif ( $DAIA::TRINE_SERIALIZER ) {
+        my %opt;
+        # NOTE: RDF/XML dumps all namespaces, so avoid it
+        $opt{namespaces} = $DAIA::RDF_NS if $DAIA::RDF_NS and $format ne 'rdfxml';
+        my $ser;
+        if ( $DAIA::GRAPHVIZ and $DAIA::TRINE_MODEL and $format =~ /^(dot|svg)$/ ) {
+            $ser = $DAIA::GRAPHVIZ->new( as => $format, %opt );
+        } else {
+            $ser = eval { $DAIA::TRINE_SERIALIZER->new( $format, %opt ); };
+        }
+        if ($ser) {
+            # NOTE: We could get rid of RDF::Trine::Model if hashref converted directly to iterator
+            my $model = $DAIA::TRINE_MODEL->temporary_model;
+            $model->add_hashref( $self->rdfhash );
+            $content = $ser->serialize_model_to_string( $model );
+        }
+    }
+
+    return $content;
+}
+
+
 sub serve {
     my $self = shift;
     my $first = shift if @_ % 2;
@@ -185,9 +221,10 @@ sub serve {
     }
     #_enable_utf8_layer($to); # TODO: this does not work
     if (! $attr{noutf8} ) {
-        eval{ binmode $to, ':utf8'  };
+        eval{ binmode $to, ':encoding(UTF-8)'  };
     }
 
+    # TODO: user serialize($format) instead
     if ( defined $format and $format eq 'json' ) {
         print $to CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
         if (not exists $attr{callback}) {
@@ -416,12 +453,9 @@ sub _enable_utf8_layer {
     foreach my $layer ( PerlIO::get_layers( $fh ) ) {
         return if $layer =~ /^encoding|^utf8/;
     }
-    binmode $fh, ':utf8';
+    binmode $fh, ':encoding(UTF-8)';
 }
 
-
-# some constants
-our $RDFNAMESPACE = 'http://purl.org/ontology/daia/';
 
 our %COMMON_PROPERTIES =( 
     id => {
@@ -440,11 +474,6 @@ our %COMMON_PROPERTIES =(
         repeatable => 1,
         predicate => 'http://purl.org/dc/terms/description',
     },
-    error => {
-        type => 'DAIA::Error',
-        repeatable => 1,
-        predicate => $DAIA::Object::RDFNAMESPACE.'hasError'
-    }
 );
 
 1;
@@ -458,7 +487,7 @@ DAIA::Object - Abstract base class of all DAIA classes
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 DESCRIPTION
 
@@ -522,10 +551,16 @@ Returns the object as hashref representing an RDF structure. This hashref
 structure is compatible with RDF/JSON and with the ARC2 library for PHP
 You can directly pass it the method C<add_hashref> of L<RDF::Trine::Model>.
 
+=head2 serialize ( $format )
+
+Serialize in some required format (C<xml>, C<json>, C<rdfjson> plus possibly
+more RDF serialization forms). A list of supported formats is returned by
+C<DAIA::formats>.
+
 =head2 serve
 
 Serialize the object and send it to STDOUT with the appropriate HTTP headers.
-See L<DAIA/"DAIA OBJECTS"> for details.
+See L<DAIA/"DAIA OBJECTS"> for details. This method is deprecated.
 
 =head2 rdfuri
 
@@ -562,7 +597,7 @@ Enrich a hash with hidden properties.
 
 =head2 _enable_utf8_layer
 
-Enable :utf8 layer for a given filehandle unless it or some
+Enable :encoding(UTF-8) layer for a given filehandle unless it or some
 other encoding has already been enabled.
 
 =head1 AUTHOR

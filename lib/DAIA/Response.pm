@@ -1,14 +1,14 @@
+use strict;
+use warnings;
 package DAIA::Response;
 {
-  $DAIA::Response::VERSION = '0.35';
+  $DAIA::Response::VERSION = '0.4';
 }
 #ABSTRACT: DAIA information root element
 
-use strict;
 use base 'DAIA::Object';
 
 use POSIX qw(strftime);
-
 
 our %PROPERTIES = (
     version => {
@@ -20,7 +20,6 @@ our %PROPERTIES = (
         filter    => sub { $_[0] }, # TODO: check format 
     },
     message => $DAIA::Object::COMMON_PROPERTIES{message},
-    error   => $DAIA::Object::COMMON_PROPERTIES{error},
     institution => { 
         type => 'DAIA::Institution',
     },
@@ -29,9 +28,6 @@ our %PROPERTIES = (
         repeatable => 1
     },
 );
-
-1;
-
 
 sub rdfhash {
     my $self = shift;
@@ -90,7 +86,6 @@ sub rdfhash {
     return $rdf;
 }
 
-
 sub check_valid_id {
     my $self = shift;
     my $id = shift; # TODO: take from CGI object, if not given
@@ -110,6 +105,7 @@ sub check_valid_id {
 
 1;
 
+
 __END__
 =pod
 
@@ -119,7 +115,7 @@ DAIA::Response - DAIA information root element
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 SYNOPSIS
 

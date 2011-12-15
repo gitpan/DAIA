@@ -2,7 +2,7 @@
 use warnings;
 package DAIA::Institution;
 {
-  $DAIA::Institution::VERSION = '0.35';
+  $DAIA::Institution::VERSION = '0.4';
 }
 #ABSTRACT: Organization that may hold items and provide services
 
@@ -23,7 +23,7 @@ DAIA::Institution - Organization that may hold items and provide services
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 DESCRIPTION
 

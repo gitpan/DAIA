@@ -6,9 +6,8 @@ build_requires:
   English: 0
   File::Spec: 0
   Test::More: 0
-  Test::Perl::Critic: 0
   URI: 0
-  XML::LibXML: 0
+  utf8: 0
 configure_requires:
   ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
@@ -27,21 +26,21 @@ requires:
   DateTime: 0
   DateTime::Duration: 0
   DateTime::Format::Duration: 0
-  Encode: 0
   Exporter: 0
+  Getopt::Long: 0
   IO::File: 0
   IO::Scalar: 0
   JSON: 0
   LWP::Simple: 0
   POSIX: 0
+  Pod::Usage: 0
   Scalar::Util: 0
   UNIVERSAL: 0
   XML::Simple: 0
   base: 0
   strict: 0
-  utf8: 0
   warnings: 0
 resources:
   bugtracker: https://github.com/gbv/daia/issues
   repository: https://github.com/gbv/daia
-version: 0.35
+version: 0.4

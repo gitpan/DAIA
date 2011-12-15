@@ -1,6 +1,6 @@
 package DAIA::Item;
 {
-  $DAIA::Item::VERSION = '0.35';
+  $DAIA::Item::VERSION = '0.4';
 }
 #ABSTRACT: Holds information about an item of a L<DAIA::Document>
 
@@ -10,17 +10,15 @@ use base 'DAIA::Object';
 use DAIA;
 use JSON;
 
-
 our %PROPERTIES = (
     id          => $DAIA::Object::COMMON_PROPERTIES{id},
     href        => $DAIA::Object::COMMON_PROPERTIES{href},
     message     => $DAIA::Object::COMMON_PROPERTIES{message},
-    error       => $DAIA::Object::COMMON_PROPERTIES{error},
-    fragment    => { # xs:boolean
+    part       => {
         filter => sub {
-            return unless defined $_[0];
-            return ($_[0] and not lc($_[0]) eq 'false') ? $JSON::true : $JSON::false;
-            return;
+            my $status = shift or return;
+            return unless $status eq 'broader' or $status eq 'narrower';
+            return $status;
         }
     },
     label       => {
@@ -35,6 +33,8 @@ our %PROPERTIES = (
     available   => { type => 'DAIA::Available', repeatable => 1 }, 
     unavailable => { type => 'DAIA::Unavailable', repeatable => 1 },
 );
+
+
 
 
 sub addAvailability {
@@ -93,8 +93,7 @@ sub rdfhash {
 
     my $rdf = { };
 
-    # TODO: fragment/broader
-    # department  => { type => 'DAIA::Department' }
+    # TODO: department
     
     if ($self->{storage}) {
         my $storage = $self->{storage}->rdfhash;
@@ -146,7 +145,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 PROPERTIES
 
@@ -165,10 +164,10 @@ A link to the item or to additional information about it.
 An optional list of L<DAIA::Message> objects. You can set message(s) with
 the C<message> accessor, with C<addMessage>, and with C<provideMessage>.
 
-=item fragment
+=item part
 
-Whether the item only contains a part of the document.
-B<this property will likely be renamed>.
+Set to C<narrower> if the item only contains a part of the document or
+to C<broader> if the item contains more than the document.
 
 =item label
 

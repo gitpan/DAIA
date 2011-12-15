@@ -1,12 +1,12 @@
+use strict;
+use warnings;
 package DAIA::Message;
 {
-  $DAIA::Message::VERSION = '0.35';
+  $DAIA::Message::VERSION = '0.4';
 }
-#ABSTRACT: An optional information text
+#ABSTRACT: An optional information or error message
 
-use strict;
 use base 'DAIA::Object';
-
 
 our $DEFAULT_LANG = 'en';
 
@@ -23,7 +23,10 @@ our %PROPERTIES = (
     },
     errno => {
         default => undef,
-        fixed   => undef,
+        filter => sub { 
+            return unless defined $_[0];
+            $_[0] =~ m/^-?\d+$/ ? $_[0] : 0  
+        }, 
     }
 );
 
@@ -54,7 +57,6 @@ sub rdfhash {
     return $rdf;
 }
 
-
 sub is_language_tag {
     my($tag) = lc($_[0]);
     return $tag =~ /^[a-z]{1,8}(-[a-z0-9]{1,8})*$/;
@@ -62,16 +64,17 @@ sub is_language_tag {
 
 1;
 
+
 __END__
 =pod
 
 =head1 NAME
 
-DAIA::Message - An optional information text
+DAIA::Message - An optional information or error message
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 DESCRIPTION
 
@@ -94,7 +97,8 @@ C<$DAIA::Message::DEFAULT_LANG> and set to C<'en'>.
 
 =item errno
 
-This property is always C<undef> no matter what you set it to.
+By default this property is set to C<undef>. You can set it to any integer
+for error messages.
 
 =back
 
@@ -123,8 +127,6 @@ To append a message you can use the C<add> or the C<addMessage> method:
 
   $document->add( $msg );         # $msg must be a DAIA::Message
   $document->addMessage( ... );   # ... is passed to message constructor
-
-  $document += $msg;              # same as $document->add( $msg );
 
 =head1 FUNCTIONS
 

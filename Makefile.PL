@@ -15,9 +15,8 @@ my %WriteMakefileArgs = (
     "English" => 0,
     "File::Spec" => 0,
     "Test::More" => 0,
-    "Test::Perl::Critic" => 0,
     "URI" => 0,
-    "XML::LibXML" => 0
+    "utf8" => 0
   },
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
@@ -38,22 +37,22 @@ my %WriteMakefileArgs = (
     "DateTime" => 0,
     "DateTime::Duration" => 0,
     "DateTime::Format::Duration" => 0,
-    "Encode" => 0,
     "Exporter" => 0,
+    "Getopt::Long" => 0,
     "IO::File" => 0,
     "IO::Scalar" => 0,
     "JSON" => 0,
     "LWP::Simple" => 0,
     "POSIX" => 0,
+    "Pod::Usage" => 0,
     "Scalar::Util" => 0,
     "UNIVERSAL" => 0,
     "XML::Simple" => 0,
     "base" => 0,
     "strict" => 0,
-    "utf8" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.35",
+  "VERSION" => "0.4",
   "test" => {
     "TESTS" => "t/*.t"
   }

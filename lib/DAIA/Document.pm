@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Document;
 {
-  $DAIA::Document::VERSION = '0.35';
+  $DAIA::Document::VERSION = '0.4';
 }
 #ABSTRACT: Information about a single document
 
@@ -16,7 +16,6 @@ our %PROPERTIES = (
     },
     href    => $DAIA::Object::COMMON_PROPERTIES{href},
     message => $DAIA::Object::COMMON_PROPERTIES{message},
-    error   => $DAIA::Object::COMMON_PROPERTIES{error},
     item    => { 
         type      => 'DAIA::Item', repeatable => 1,
     }
@@ -39,22 +38,24 @@ sub rdfhash {
         map { $_->rdfhash } @{$self->{message}}
     ] if $self->{message};
 
-    $me->{'http://purl.org/dc/terms/description'} = [
-        map { $_->rdfhash } @{$self->{error}}
-    ] if $self->{error};
-
     my $rdf = { };
     if ($self->{item}) {
         foreach my $item (@{$self->{item}}) {
             my $r = $item->rdfhash;
             $rdf->{$_} = $r->{$_} for keys %$r;
         }
-        # TODO: exemplar / partial / broader
-        # daia:extractOf / daia:partOf
         $me->{'http://purl.org/ontology/daia/exemplar'} = [ map {
             my $iri = $_->rdfuri;
             { value => $iri, type => ($iri =~ /^_:/) ? 'bnode' : 'uri' }
-        } @{$self->{item}} ];
+        } grep { !$_->part } @{$self->{item}} ];
+        $me->{'http://purl.org/ontology/daia/broaderExemplar'} = [ map {
+            my $iri = $_->rdfuri;
+            { value => $iri, type => ($iri =~ /^_:/) ? 'bnode' : 'uri' }
+        } grep { ($_->part||"") eq 'broader' } @{$self->{item}} ];
+        $me->{'http://purl.org/ontology/daia/narrowerExemplar'} = [ map {
+            my $iri = $_->rdfuri;
+            { value => $iri, type => ($iri =~ /^_:/) ? 'bnode' : 'uri' }
+        } grep { ($_->part||"") eq 'narrower' } @{$self->{item}} ];
     }
     
     $rdf->{ $self->rdfuri } = $me;
@@ -74,7 +75,7 @@ DAIA::Document - Information about a single document
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 PROPERTIES
 

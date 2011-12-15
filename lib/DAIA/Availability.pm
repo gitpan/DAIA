@@ -1,10 +1,11 @@
+use strict;
+use warnings;
 package DAIA::Availability;
 {
-  $DAIA::Availability::VERSION = '0.35';
+  $DAIA::Availability::VERSION = '0.4';
 }
 #ABSTRACT: Abstract base class of availability information
 
-use strict;
 use base 'DAIA::Object';
 
 use Carp::Clan;
@@ -30,7 +31,6 @@ our %PROPERTIES = (
     },
     href    => $DAIA::Object::COMMON_PROPERTIES{href},
     message => $DAIA::Object::COMMON_PROPERTIES{message},
-    error   => $DAIA::Object::COMMON_PROPERTIES{error},
     limitation => {
         type => 'DAIA::Limitation',
         repeatable => 1,
@@ -269,7 +269,7 @@ DAIA::Availability - Abstract base class of availability information
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 DESCRIPTION
 

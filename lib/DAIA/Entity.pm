@@ -1,13 +1,13 @@
+use strict;
+use warnings;
 package DAIA::Entity;
 {
-  $DAIA::Entity::VERSION = '0.35';
+  $DAIA::Entity::VERSION = '0.4';
 }
 #ABSTRACT: Abstract base class of Department, Institution, Storage, and Limitation
 
-use strict;
 use Data::Validate::URI qw(is_uri is_web_uri);
 use base 'DAIA::Object';
-
 
 our %PROPERTIES = (
     content => { 
@@ -51,6 +51,7 @@ sub rdfhash {
 
 1;
 
+
 __END__
 =pod
 
@@ -60,7 +61,7 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 
 =head1 VERSION
 
-version 0.35
+version 0.4
 
 =head1 PROPERTIES
 

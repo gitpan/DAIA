@@ -12,7 +12,6 @@ lib/DAIA/Available.pm
 lib/DAIA/Department.pm
 lib/DAIA/Document.pm
 lib/DAIA/Entity.pm
-lib/DAIA/Error.pm
 lib/DAIA/Institution.pm
 lib/DAIA/Item.pm
 lib/DAIA/Limitation.pm
@@ -26,7 +25,6 @@ t/10object.t
 t/15daia.t
 t/20entities.t
 t/30message.t
-t/35error.t
 t/40availability.t
 t/45datetime.t
 t/50item.t
