@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Object;
 {
-  $DAIA::Object::VERSION = '0.4';
+  $DAIA::Object::VERSION = '0.41';
 }
 #ABSTRACT: Abstract base class of all DAIA classes
 
@@ -487,7 +487,7 @@ DAIA::Object - Abstract base class of all DAIA classes
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Unavailable;
 {
-  $DAIA::Unavailable::VERSION = '0.4';
+  $DAIA::Unavailable::VERSION = '0.41';
 }
 #ABSTRACT: Information about a service that is currently unavailable
 
@@ -40,7 +40,7 @@ DAIA::Unavailable - Information about a service that is currently unavailable
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 

@@ -43,4 +43,4 @@ requires:
 resources:
   bugtracker: https://github.com/gbv/daia/issues
   repository: https://github.com/gbv/daia
-version: 0.4
+version: 0.41

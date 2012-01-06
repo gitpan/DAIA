@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Response;
 {
-  $DAIA::Response::VERSION = '0.4';
+  $DAIA::Response::VERSION = '0.41';
 }
 #ABSTRACT: DAIA information root element
 
@@ -60,10 +60,12 @@ sub rdfhash {
         map { { type => 'uri', value => $_->rdfuri } } @see
     ] if @see;
 
-    foreach my $doc (@doc) {
-        $rdf->{ $doc->rdfuri }->{'http://purl.org/ontology/daia/collectedBy'} = [{
-            type => "uri", value => $inst->rdfuri
-        }];
+    if ($inst) {
+        foreach my $doc (@doc) {
+            $rdf->{ $doc->rdfuri }->{'http://purl.org/ontology/daia/collectedBy'} = [{
+                type => "uri", value => $inst->rdfuri
+            }];
+        }
     }
 
     # TODO: add connections
@@ -115,7 +117,7 @@ DAIA::Response - DAIA information root element
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 SYNOPSIS
 

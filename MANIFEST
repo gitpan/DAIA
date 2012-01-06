@@ -34,6 +34,8 @@ t/80xml.t
 t/85json.t
 t/90rdf.t
 t/daia.xsd
+t/err.xml
+t/err2.xml
 t/example.json
 t/example.xml
 t/example2.xml

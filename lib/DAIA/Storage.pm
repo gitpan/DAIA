@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Storage;
 {
-  $DAIA::Storage::VERSION = '0.4';
+  $DAIA::Storage::VERSION = '0.41';
 }
 #ABSTRACT: Information about the place where an item is stored
 
@@ -23,7 +23,7 @@ DAIA::Storage - Information about the place where an item is stored
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Availability;
 {
-  $DAIA::Availability::VERSION = '0.4';
+  $DAIA::Availability::VERSION = '0.41';
 }
 #ABSTRACT: Abstract base class of availability information
 
@@ -269,7 +269,7 @@ DAIA::Availability - Abstract base class of availability information
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 

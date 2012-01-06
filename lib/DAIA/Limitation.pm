@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Limitation;
 {
-  $DAIA::Limitation::VERSION = '0.4';
+  $DAIA::Limitation::VERSION = '0.41';
 }
 #ABSTRACT: Information about specific limitations of availability
 
@@ -23,7 +23,7 @@ DAIA::Limitation - Information about specific limitations of availability
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 

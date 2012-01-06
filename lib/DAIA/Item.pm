@@ -1,6 +1,6 @@
 package DAIA::Item;
 {
-  $DAIA::Item::VERSION = '0.4';
+  $DAIA::Item::VERSION = '0.41';
 }
 #ABSTRACT: Holds information about an item of a L<DAIA::Document>
 
@@ -24,7 +24,10 @@ our %PROPERTIES = (
     label       => {
         default => '',
         filter => sub { # label can be specified as array or as element
-            my $v = (ref($_[0]) eq 'ARRAY') ? $_[0]->[0] : $_[0]; 
+            my $v = $_[0];
+            if (ref($v)) {
+                $v = (ref($v) eq 'ARRAY') ? $v->[0] : ''; 
+            }
             return "$v";
         },
     },
@@ -145,7 +148,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 PROPERTIES
 

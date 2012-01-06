@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA;
 {
-  $DAIA::VERSION = '0.4';
+  $DAIA::VERSION = '0.41';
 }
 #ABSTRACT: Document Availability Information API
 
@@ -54,8 +54,6 @@ use DAIA::Storage;
 use DAIA::Limitation;
 
 use Data::Validate::URI qw(is_uri);
-
-
 
 
 sub response     { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Response->new( @_ ) }
@@ -304,7 +302,6 @@ sub _filter_xml {
 
 1;
 
-
 __END__
 =pod
 
@@ -314,7 +311,7 @@ DAIA - Document Availability Information API
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 SYNOPSIS
 
@@ -332,6 +329,10 @@ transform DAIA/XML to HTML.
   $daia = DAIA::parse( data => $string ); # $string must be Unicode
 
 =head2 A DAIA server
+
+It is highly recommended to use L<Plack:App::DAIA> instead of creating a
+DAIA server from scratch. The following example implements a DAIA Server
+without this module.
 
   use DAIA;
 
@@ -382,7 +383,6 @@ transform DAIA/XML to HTML.
 
 To run your script as CGI, you may have to enable CGI with C<Options +ExecCGI>
 and C<AddHandler cgi-script .pl> in your Apache configuration or in C<.htaccess>.
-Some more hints are L<listed below|/"DAIA Server hints">.
 
 =head1 DESCRIPTION
 
@@ -616,59 +616,6 @@ you provide a method, the method is called and the script exits if only
 if the return value is true.
 
 =back
-
-=head1 DAIA Server hints
-
-DAIA server scripts can be tested on command line by providing HTTP
-parameters as C<key=value> pairs.
-
-It is recommended to run a DAIA server via L<mod_perl> or FastCGI so
-it does not need to be compiled each time it is run. For mod_perl you
-simply put your script in a directory which C<PerlResponseHandler> has
-been set for (for instance to L<Apache::Registry> or L<ModPerl::PerlRun>).
-
-For FastCGI you need to install L<FCGI> and set the CGI handler to
-L<AddHandler fcgid-script .pl> in C<.htaccess>. Your DAIA server must
-consist of an initialization section and a response loop:
-
-    #!/usr/bin/perl
-    use DAIA;
-    use CGI::Fast;
-    
-    # ...initialization section, which is executed only once ...
-    
-    while (my $q = new CGI::Fast) { # response loop
-        my $id = $q->param('id');
-
-        # ... create response ...
-
-        $response->serve( cgi => $q, exitif => 0 );
-    }
-
-The C<serve> methods needs a C<cgi> or C<format> parameter and it is
-been told not to exit the script. It is recommended to check every
-given timespan whether the script has been modified and restart in
-this case:
-
-    #!/usr/bin/perl
-    use DAIA;
-    use CGI::Fast;
-    
-    my $started = time;
-    my $thisscript = $0;
-    my $lastmod = (stat($thisscript))[9] # mtime;
-    
-    sub restart {
-        return 0 if time - $started < 10; # check every 10 seconds
-            return 1 if (stat($thisscript))[9] > $lastmod;
-    }
-    
-    while (my $q = new CGI::Fast) { # response loop
-
-        # ... create response ...
-
-        $response->serve( $q, exitif => \&restart } );
-    }
 
 =head1 AUTHOR
 

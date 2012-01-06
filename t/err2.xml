@@ -1,0 +1,14 @@
+<?xml-stylesheet type="text/xsl" href="jsp/import/xsl/daia.xsl"?>
+<daia xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://ws.gbv.de/daia/" version="0.5" xsi:schemaLocation="http://ws.gbv.de/daia/ http://ws.gbv.de/daia/daia.xsd" timestamp="2012-01-02T10:59:11Z">
+    <document id="urn:xyz">
+            <item id="id:abc">
+                        <message lang="de" />
+                        <label />
+                        <storage>Augenklinik</storage>
+                            <available service="presentation">
+                                    <limitation>Country: CH</limitation>
+                                    </available>
+                                    </item>
+                                        </document>
+                                        </daia>
+

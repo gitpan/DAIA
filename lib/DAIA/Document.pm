@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Document;
 {
-  $DAIA::Document::VERSION = '0.4';
+  $DAIA::Document::VERSION = '0.41';
 }
 #ABSTRACT: Information about a single document
 
@@ -75,7 +75,7 @@ DAIA::Document - Information about a single document
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 PROPERTIES
 

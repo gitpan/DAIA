@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Message;
 {
-  $DAIA::Message::VERSION = '0.4';
+  $DAIA::Message::VERSION = '0.41';
 }
 #ABSTRACT: An optional information or error message
 
@@ -74,7 +74,7 @@ DAIA::Message - An optional information or error message
 
 =head1 VERSION
 
-version 0.4
+version 0.41
 
 =head1 DESCRIPTION
 
