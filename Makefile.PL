@@ -16,6 +16,7 @@ my %WriteMakefileArgs = (
     "File::Spec" => 0,
     "Test::More" => 0,
     "URI" => 0,
+    "XML::LibXML" => 0,
     "utf8" => 0
   },
   "CONFIGURE_REQUIRES" => {
@@ -46,13 +47,13 @@ my %WriteMakefileArgs = (
     "POSIX" => 0,
     "Pod::Usage" => 0,
     "Scalar::Util" => 0,
-    "UNIVERSAL" => 0,
+    "XML::SAX" => 0,
     "XML::Simple" => 0,
     "base" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.41",
+  "VERSION" => "0.42",
   "test" => {
     "TESTS" => "t/*.t"
   }

@@ -1,6 +1,6 @@
 package DAIA::Item;
 {
-  $DAIA::Item::VERSION = '0.41';
+  $DAIA::Item::VERSION = '0.42';
 }
 #ABSTRACT: Holds information about an item of a L<DAIA::Document>
 
@@ -36,8 +36,6 @@ our %PROPERTIES = (
     available   => { type => 'DAIA::Available', repeatable => 1 }, 
     unavailable => { type => 'DAIA::Unavailable', repeatable => 1 },
 );
-
-
 
 
 sub addAvailability {
@@ -148,7 +146,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =head1 VERSION
 
-version 0.41
+version 0.42
 
 =head1 PROPERTIES
 
@@ -164,8 +162,8 @@ A link to the item or to additional information about it.
 
 =item message
 
-An optional list of L<DAIA::Message> objects. You can set message(s) with
-the C<message> accessor, with C<addMessage>, and with C<provideMessage>.
+An optional list of L<DAIA::Message> objects. You can get/set message(s) with
+the C<message> accessor.
 
 =item part
 

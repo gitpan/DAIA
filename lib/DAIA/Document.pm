@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Document;
 {
-  $DAIA::Document::VERSION = '0.41';
+  $DAIA::Document::VERSION = '0.42';
 }
 #ABSTRACT: Information about a single document
 
@@ -75,7 +75,7 @@ DAIA::Document - Information about a single document
 
 =head1 VERSION
 
-version 0.41
+version 0.42
 
 =head1 PROPERTIES
 
@@ -95,7 +95,7 @@ Must be an URI but should be an URL.
 =item message
 
 An optional list of L<DAIA::Message> objects. You can set message(s) with
-the C<message> accessor, with C<addMessage>, and with C<provideMessage>.
+the C<message> accessor.
 
 =item item
 

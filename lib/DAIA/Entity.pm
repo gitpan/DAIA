@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Entity;
 {
-  $DAIA::Entity::VERSION = '0.41';
+  $DAIA::Entity::VERSION = '0.42';
 }
 #ABSTRACT: Abstract base class of Department, Institution, Storage, and Limitation
 
@@ -61,7 +61,7 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 
 =head1 VERSION
 
-version 0.41
+version 0.42
 
 =head1 PROPERTIES
 

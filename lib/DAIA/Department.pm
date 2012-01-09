@@ -2,7 +2,7 @@
 use warnings;
 package DAIA::Department;
 {
-  $DAIA::Department::VERSION = '0.41';
+  $DAIA::Department::VERSION = '0.42';
 }
 #ABSTRACT: Information about a department in a L<DAIA::Institution>
 
@@ -23,7 +23,7 @@ DAIA::Department - Information about a department in a L<DAIA::Institution>
 
 =head1 VERSION
 
-version 0.41
+version 0.42
 
 =head1 DESCRIPTION
 
