@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Object;
 {
-  $DAIA::Object::VERSION = '0.42';
+  $DAIA::Object::VERSION = '0.421';
 }
 #ABSTRACT: Abstract base class of all DAIA classes
 
@@ -132,7 +132,10 @@ sub struct {
         } elsif( $property eq 'label' and $self->{$property} eq '' ) {
             # ignore empty string label
         } else {
-            $struct->{$property} = $self->{$property};
+            # remove characters not allowed in XML 1.0
+            my $value = $self->{$property};
+            $value =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
+            $struct->{$property} = $value;
         }
     }
     return $struct;
@@ -208,7 +211,7 @@ sub serve {
     }
     $attr{exitif} = 0 unless exists $attr{exitif};
 
-    my $format = lc($attr{format});
+    my $format = lc($attr{format} || '');
     my $header = defined $attr{header} ? $attr{header} : 1;
     my $xslt = $attr{xslt};
     my $pi = $attr{pi};
@@ -484,7 +487,7 @@ DAIA::Object - Abstract base class of all DAIA classes
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 DESCRIPTION
 
@@ -557,7 +560,9 @@ C<DAIA::formats>.
 =head2 serve
 
 Serialize the object and send it to STDOUT with the appropriate HTTP headers.
-See L<DAIA/"DAIA OBJECTS"> for details. This method is deprecated.
+See L<DAIA/"DAIA OBJECTS"> for details. 
+
+This method is deprecated, please use L<Plack::App::DAIA> instead!
 
 =head2 rdfuri
 
@@ -603,7 +608,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

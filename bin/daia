@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use DAIA;
-use LWP::Simple qw(get);
 use Data::Dumper;
 use JSON;
 use Getopt::Long;
@@ -102,14 +101,13 @@ daia - DAIA command line client
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 SYNOPSIS
 
 daia [<OPTIONS>] [ <FILES> | <URL> [<IDS>] ]
 
  Options:
-   -help            brief help message
    -?|-h|-help      show this help
    -man             full documentation
    -input FORMAT    set input format (json or xml)
@@ -153,7 +151,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

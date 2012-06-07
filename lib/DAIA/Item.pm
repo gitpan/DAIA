@@ -1,6 +1,6 @@
 package DAIA::Item;
 {
-  $DAIA::Item::VERSION = '0.42';
+  $DAIA::Item::VERSION = '0.421';
 }
 #ABSTRACT: Holds information about an item of a L<DAIA::Document>
 
@@ -146,7 +146,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 PROPERTIES
 
@@ -246,7 +246,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

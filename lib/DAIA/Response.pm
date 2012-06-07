@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Response;
 {
-  $DAIA::Response::VERSION = '0.42';
+  $DAIA::Response::VERSION = '0.421';
 }
 #ABSTRACT: DAIA information root element
 
@@ -136,7 +136,7 @@ DAIA::Response - DAIA information root element
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 SYNOPSIS
 
@@ -149,7 +149,7 @@ version 0.42
   $r->institution( $institution );
   $institution = $r->institution;
 
-  my $documents = $r->document;
+  my @documents = $r->document;
 
   $r->timestamp;
   $r->version;
@@ -215,7 +215,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

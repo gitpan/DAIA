@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Message;
 {
-  $DAIA::Message::VERSION = '0.42';
+  $DAIA::Message::VERSION = '0.421';
 }
 #ABSTRACT: An optional information or error message
 
@@ -74,7 +74,7 @@ DAIA::Message - An optional information or error message
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 DESCRIPTION
 
@@ -142,7 +142,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

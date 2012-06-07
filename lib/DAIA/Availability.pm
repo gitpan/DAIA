@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Availability;
 {
-  $DAIA::Availability::VERSION = '0.42';
+  $DAIA::Availability::VERSION = '0.421';
 }
 #ABSTRACT: Abstract base class of availability information
 
@@ -269,7 +269,7 @@ DAIA::Availability - Abstract base class of availability information
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 DESCRIPTION
 
@@ -400,7 +400,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

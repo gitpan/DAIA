@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package DAIA::Entity;
 {
-  $DAIA::Entity::VERSION = '0.42';
+  $DAIA::Entity::VERSION = '0.421';
 }
 #ABSTRACT: Abstract base class of Department, Institution, Storage, and Limitation
 
@@ -61,7 +61,7 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 
 =head1 VERSION
 
-version 0.42
+version 0.421
 
 =head1 PROPERTIES
 
@@ -91,7 +91,7 @@ Jakob Voss
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Jakob Voss.
+This software is copyright (c) 2012 by Jakob Voss.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
