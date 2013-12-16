@@ -1,8 +1,6 @@
 package DAIA::Item;
-{
-  $DAIA::Item::VERSION = '0.421';
-}
 #ABSTRACT: Holds information about an item of a L<DAIA::Document>
+our $VERSION = '0.43'; #VERSION
 
 use strict;
 use base 'DAIA::Object';
@@ -138,7 +136,10 @@ sub rdfhash {
 1;
 
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -146,7 +147,7 @@ DAIA::Item - Holds information about an item of a L<DAIA::Document>
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 PROPERTIES
 
@@ -242,14 +243,13 @@ URI or by its short name), you only get those services.
 
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

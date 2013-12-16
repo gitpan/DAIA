@@ -1,10 +1,8 @@
 use strict;
 use warnings;
 package DAIA::Unavailable;
-{
-  $DAIA::Unavailable::VERSION = '0.421';
-}
 #ABSTRACT: Information about a service that is currently unavailable
+our $VERSION = '0.43'; #VERSION
 
 use base 'DAIA::Availability';
 use DateTime;
@@ -30,9 +28,11 @@ our %PROPERTIES = (
 
 1;
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -40,7 +40,7 @@ DAIA::Unavailable - Information about a service that is currently unavailable
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 DESCRIPTION
 
@@ -86,14 +86,13 @@ probably won't be available in the future.
 
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

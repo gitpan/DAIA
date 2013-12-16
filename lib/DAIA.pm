@@ -1,10 +1,8 @@
 use strict;
 use warnings;
 package DAIA;
-{
-  $DAIA::VERSION = '0.421';
-}
 #ABSTRACT: Document Availability Information API
+our $VERSION = '0.43'; #VERSION
 
 # we do not want depend on the following modules
 our ($TRINE_MODEL, $TRINE_SERIALIZER, $RDF_NS, $GRAPHVIZ);
@@ -32,14 +30,13 @@ our %EXPORT_TAGS = (
 );
 our @EXPORT_OK = qw(is_uri parse guess);
 Exporter::export_ok_tags;
-$EXPORT_TAGS{all} = [@EXPORT_OK, 'message', 'serve'];
+$EXPORT_TAGS{all} = [@EXPORT_OK, 'message'];
 Exporter::export_tags('all');
 
 use Carp; # use Carp::Clan; # qw(^DAIA::);
 use IO::File;
-use LWP::Simple qw(get);
-use XML::Simple; # only for parsing (may be changed)
-use XML::SAX;    # needed for namespace-aware parsing
+use LWP::Simple ();
+use XML::LibXML::Simple qw(XMLin);
 
 use DAIA::Response;
 use DAIA::Document;
@@ -70,12 +67,6 @@ sub storage      { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::S
 sub limitation   { local $Carp::CarpLevel = $Carp::CarpLevel + 1; return DAIA::Limitation->new( @_ ) }
 
 
-sub serve {
-    local $Carp::CarpLevel = $Carp::CarpLevel + 1; 
-    shift->serve( @_ );
-}
-
-
 sub parse {
     shift if UNIVERSAL::isa( $_[0], __PACKAGE__ );
     my ($from, %param) = (@_ % 2) ? (@_) : (undef,@_);
@@ -96,7 +87,7 @@ sub parse {
     }
     if ( $file ) {
         if ( $file =~ /^http(s)?:\/\// ) {
-            $from = get($file) or croak "Failed to fetch $file via HTTP"; 
+            $from = LWP::Simple::get($file) or croak "Failed to fetch $file via HTTP"; 
         } else {
             if ( ! (ref($file) eq 'GLOB' or UNIVERSAL::isa( $file, 'IO::Handle') ) ) {
                 $file = do { IO::File->new($file, '<:encoding(UTF-8)') or croak("Failed to open file $file") };
@@ -130,8 +121,7 @@ sub parse {
             #print "IS UTF8?". utf8::is_utf8($from) . "\n";
         }
 
-        my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => 1, KeyAttr => [ ] ); };
-        $xml = daia_xml_roots($xml);
+        my $xml = _parse_daia_xml($from);
 
         croak $@ if $@;
         croak "XML does not contain DAIA elements" unless $xml;
@@ -231,13 +221,11 @@ sub formats {
 
 my $NSEXPDAIA    = qr/{http:\/\/(ws.gbv.de|purl.org\/ontology)\/daia\/}(.*)/;
 
-# =head1 daia_xml_roots ( $xml )
-#
-# This internal method is passed a hash reference as parsed by L<XML::Simple>
-# and traverses the XML tree to find the first DAIA element(s). It is needed
-# if DAIA/XML is wrapped in other XML structures.
-#
-# =cut
+sub _parse_daia_xml {
+    my ($from) = @_;
+    my $xml = eval { XMLin( $from, KeepRoot => 1, NSExpand => 1, KeyAttr => [ ], NormalizeSpace => 2 ); };
+    daia_xml_roots($xml);
+}
 
 sub daia_xml_roots {
     my $xml = shift; # hash reference
@@ -275,7 +263,7 @@ sub daia_xml_roots {
     return $out;
 }
 
-# filter out non DAIA XML elements and 'xmlns' attributes
+# filter out non DAIA XML elements, 'xmlns' attributes and empty values
 sub _filter_xml { 
     my $xml = shift;
     map { _filter_xml($_) } @$xml if ref($xml) eq 'ARRAY';
@@ -283,13 +271,14 @@ sub _filter_xml {
 
     my (@del,%add);
     foreach my $key (keys %$xml) {
+        my $value = $xml->{$key};
         if ($key =~ /^{([^}]*)}(.*)/) {
             my $local = $2;
-            if ($1 =~ /^http:\/\/(ws.gbv.de|purl.org\/ontology)\/daia\/$/) {
+            if ($1 =~ /^http:\/\/(ws.gbv.de|purl.org\/ontology)\/daia\/$/ and $value ne '') {
                 $xml->{$local} = $xml->{$key};
             }
             push @del, $key;
-        } elsif ($key =~ /^xmlns/ or $key =~ /:/) {
+        } elsif ($key =~ /^xmlns/ or $key =~ /:/ or $value eq '') {
             push @del, $key;
         }
     }
@@ -304,7 +293,10 @@ sub _filter_xml {
 1;
 
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -312,7 +304,7 @@ DAIA - Document Availability Information API
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 SYNOPSIS
 
@@ -331,59 +323,7 @@ transform DAIA/XML to HTML.
 
 =head2 A DAIA server
 
-It is highly recommended to use L<Plack:App::DAIA> instead of creating a
-DAIA server from scratch. The following example implements a DAIA Server
-without this module.
-
-  use DAIA;
-
-  use CGI;
-  my $id = CGI->new->param('id');
-
-  my $r = response( institution => {
-      href    => "http://example.com/your-institution's-homepage",
-      content => "Your institution's name" 
-  } );
-
-  $r->addMessage("en" => "Not an URI: $id", errno => 1 )
-      unless DAIA::is_uri($id);
-
-  my @holdings = get_holding_information($id);      # your custom method
-
-  if ( @holdings ) {
-      my $doc = document( id => $id, href => "http://example.com/docs/$id" );
-      foreach my $h ( @holdings ) {
-          my $item = item();
-
-          my %stor = get_holding_storage( $h );     # your custom method
-          $item->storage( id => $stor{id}, href => $stor{href}, $stor{name} );
-
-          $item->label( get_holding_label( $h ) );  # your custom method
-          $item->href( get_holding_url( $h ) );     # your custom method
-
-          # add availability services
-          my @services;
-
-          if ( get_holding_is_here( $h ) ) {          # your custom method
-              push @services, available('presentation'), available('loan');
-          } elsif( get_holding_is_not_here( $h ) ) {  # your custom method
-              push @services, # expected to be back in 5 days
-              unavailable( 'presentation', expected => 'P5D' ),
-              unavailable( 'loan', expected => 'P5D' );
-          } else {
-             #  more cases (depending on the complexity of you application)
-          }
-          $item->add( @services );
-      }
-      $r->document( $doc );
-  } else {
-      $r->addMessage( "en" => "No holding information found for id $id" );
-  }
-
-  $r->serve( xslt => "http://path.to/daia.xsl" );
-
-To run your script as CGI, you may have to enable CGI with C<Options +ExecCGI>
-and C<AddHandler cgi-script .pl> in your Apache configuration or in C<.htaccess>.
+See L<Plack:App::DAIA>.
 
 =head1 DESCRIPTION
 
@@ -447,7 +387,6 @@ By default constructor functions are exported for all objects.
 To disable exporting, include DAIA like this:
 
   use DAIA qw();       # do not export any functions
-  use DAIA qw(serve);  # only export function 'serve'
   use DAIA qw(:core);  # only export core functions
 
 You can select two groups, both are exported by default:
@@ -465,21 +404,12 @@ C<institution>, C<department>, C<storage>, C<limitation>
 
 =back
 
-Additional functions are C<message> as object constructor,
-and C<serve>. The other functions below are not exported by default.
+Additional functions is C<message> as object constructor.
+The other functions below are not exported by default.
 You can call them as method or as function, for instance:
 
   DAIA->parse_xml( $xml );
   DAIA::parse_xml( $xml );
-
-=head2 serve( [ [ format => ] $format ] [ %options ] )
-
-Calls the method method C<serve> of L<DAIA::Response> or another DAIA object
-to serialize and send a response to STDOUT with appropriate HTTP headers. 
-You can call it this way:
-
-  serve( $response, @additionlArgs );  # as function
-  $response->serve( @additionlArgs );  # as method
 
 =head2 parse ( $from [ %parameters ] )
 
@@ -568,66 +498,15 @@ Adds typed properties.
 
 Returns several serialization forms.
 
-=head2 serve ( [ [ format => ] $format | [ cgi => $CGI ] ] [ %more_options ] )
-
-Serialize the object and send it to STDOUT (or to another stream) with the 
-appropriate HTTP headers. This method is available for all DAIA objects but
-mostly used to serve a L<DAIA::Response>. The serialized object must already
-be encoded in UTF-8 (but it can contain Unicode strings).
-
-The serialization format can be specified with the first parameter as
-C<format> string (C<json> or C<xml>) or C<cgi> object. If no format is
-given, it is searched for in the L<CGI> query parameters. The default 
-format is C<xml>. Other possible options are:
-
-=over
-
-=item header
-
-Print HTTP headers (default). Use C<header =E<gt> 0> to disable headers.
-
-=head xmlheader
-
-Print the XML header of XML format is used. Enabled by default.
-
-=item xslt
-
-Add a link to the given XSLT stylesheet if XML format is used.
-
-=item pi
-
-Add one or more processing instructions if XML format is used.
-
-=item callback
-
-Add this JavaScript callback function in JSON format. If no callback
-function is specified, it is searched for in the CGI query parameters.
-You can disable callback support by setting C<callback =E<gt> undef>.
-
-=item to
-
-Serialize to a given stream (L<IO::Handle>, GLOB, or string reference)
-instead of STDOUT. You may also want to set C<exitif> if you use
-this option.
-
-=item exitif
-
-By setting this method to a true value you make it to exit the program.
-you provide a method, the method is called and the script exits if only
-if the return value is true.
-
-=back
-
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

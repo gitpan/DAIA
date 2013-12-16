@@ -1,10 +1,8 @@
 use strict;
 use warnings;
 package DAIA::Document;
-{
-  $DAIA::Document::VERSION = '0.421';
-}
 #ABSTRACT: Information about a single document
+our $VERSION = '0.43'; #VERSION
 
 use base 'DAIA::Object';
 use Carp 'croak';
@@ -18,7 +16,7 @@ our %PROPERTIES = (
     message => $DAIA::Object::COMMON_PROPERTIES{message},
     item    => { 
         type      => 'DAIA::Item', repeatable => 1,
-    }
+    },
 );
 
 sub rdftype { 'http://purl.org/ontology/bibo/Document' }
@@ -65,9 +63,11 @@ sub rdfhash {
  
 1;
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -75,7 +75,7 @@ DAIA::Document - Information about a single document
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 PROPERTIES
 
@@ -117,14 +117,13 @@ Add a specified or a new L<DAIA::Item>.
 
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

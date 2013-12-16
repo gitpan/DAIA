@@ -1,10 +1,8 @@
 use strict;
 use warnings;
 package DAIA::Entity;
-{
-  $DAIA::Entity::VERSION = '0.421';
-}
 #ABSTRACT: Abstract base class of Department, Institution, Storage, and Limitation
+our $VERSION = '0.43'; #VERSION
 
 use Data::Validate::URI qw(is_uri is_web_uri);
 use base 'DAIA::Object';
@@ -51,9 +49,11 @@ sub rdfhash {
 
 1;
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -61,7 +61,7 @@ DAIA::Entity - Abstract base class of Department, Institution, Storage, and Limi
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 PROPERTIES
 
@@ -87,14 +87,13 @@ property 'page' (L<http://xmlns.com/foaf/0.1/page>).
 
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

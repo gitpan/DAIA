@@ -1,14 +1,10 @@
 use strict;
 use warnings;
 package DAIA::Object;
-{
-  $DAIA::Object::VERSION = '0.421';
-}
 #ABSTRACT: Abstract base class of all DAIA classes
+our $VERSION = '0.43'; #VERSION
 
-use strict;
 use Carp::Clan;
-use CGI; # TODO: allow other kind of CGI
 use Data::Validate::URI qw(is_uri is_web_uri);
 use IO::Scalar;
 use Scalar::Util qw(refaddr reftype);
@@ -191,57 +187,6 @@ sub serialize {
     }
 
     return $content;
-}
-
-
-sub serve {
-    my $self = shift;
-    my $first = shift if @_ % 2;
-    my (%attr) = @_;
-    $self->_hidden_prop( \%attr );
-
-    if ( UNIVERSAL::isa( $first,'CGI' ) ) {
-        $attr{cgi} = $first;
-    } elsif (defined $first) {
-        $attr{format} = $first;
-    }
-    if (not exists $attr{'format'}) {
-        $attr{cgi} = CGI->new unless $attr{cgi};
-        $attr{format} = $attr{'cgi'}->param('format');
-    }
-    $attr{exitif} = 0 unless exists $attr{exitif};
-
-    my $format = lc($attr{format} || '');
-    my $header = defined $attr{header} ? $attr{header} : 1;
-    my $xslt = $attr{xslt};
-    my $pi = $attr{pi};
-    my $xmlheader = defined $attr{xmlheader} ? $attr{xmlheader} : 1;
-    my $to = $attr{to} || \*STDOUT;
-    if ( ref($to) eq 'SCALAR' ) {
-        $$to = "";
-        $to = IO::Scalar->new( $to );
-    }
-    #_enable_utf8_layer($to); # TODO: this does not work
-    if (! $attr{noutf8} ) {
-        eval{ binmode $to, ':encoding(UTF-8)'  };
-    }
-
-    # TODO: user serialize($format) instead
-    if ( defined $format and $format eq 'json' ) {
-        print $to CGI::header( '-type' => "application/javascript; charset=utf-8" ) if $header;
-        if (not exists $attr{callback}) {
-            $attr{cgi} = CGI->new unless $attr{cgi};
-            $attr{callback} = $attr{cgi}->param('callback');
-        }
-        print $to $self->json( $attr{callback} );
-    } else {
-        print $to CGI::header( -type => "application/xml; charset=utf-8" ) if $header;
-        my $xml = $self->xml( xmlns => 1, header => 1, xslt => $xslt, pi => $pi, header => $xmlheader );
-        print $to $xml."\n";
-    }
-
-    $attr{'exitif'} = $attr{'exitif'}() if ref($attr{'exitif'}) eq 'CODE';
-    exit if $attr{'exitif'};
 }
 
 
@@ -479,7 +424,10 @@ our %COMMON_PROPERTIES =(
 1;
 
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -487,7 +435,7 @@ DAIA::Object - Abstract base class of all DAIA classes
 
 =head1 VERSION
 
-version 0.421
+version 0.43
 
 =head1 DESCRIPTION
 
@@ -557,13 +505,6 @@ Serialize in some required format (C<xml>, C<json>, C<rdfjson> plus possibly
 more RDF serialization forms). A list of supported formats is returned by
 C<DAIA::formats>.
 
-=head2 serve
-
-Serialize the object and send it to STDOUT with the appropriate HTTP headers.
-See L<DAIA/"DAIA OBJECTS"> for details. 
-
-This method is deprecated, please use L<Plack::App::DAIA> instead!
-
 =head2 rdfuri
 
 Returns the URI of this object, which is either an URI (the C<id> property),
@@ -582,8 +523,8 @@ this magic method. Thanks, AUTOLOAD, thanks Perl.
 
 =head2 xml_write ( $roottag, $content, $level )
 
-Simple, adopted XML::Simple::XMLOut replacement with support of element order 
-and special treatment of C<label> elements.
+Simple, adopted XMLOut replacement with support of element order and special
+treatment of C<label> elements.
 
 =head2 xml_escape_value ( $string )
 
@@ -604,14 +545,13 @@ other encoding has already been enabled.
 
 =head1 AUTHOR
 
-Jakob Voss
+Jakob Voß
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Jakob Voss.
+This software is copyright (c) 2013 by Jakob Voß.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

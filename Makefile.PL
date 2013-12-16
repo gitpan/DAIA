@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-
+use 5.010000;
 
 use ExtUtils::MakeMaker 6.30;
 
@@ -10,35 +10,24 @@ use ExtUtils::MakeMaker 6.30;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Document Availability Information API",
-  "AUTHOR" => "Jakob Voss",
-  "BUILD_REQUIRES" => {
-    "English" => 0,
-    "File::Spec" => 0,
-    "Test::More" => 0,
-    "URI" => 0,
-    "XML::LibXML" => 0,
-    "utf8" => 0
-  },
+  "AUTHOR" => "Jakob Vo\x{df}",
+  "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
   },
   "DISTNAME" => "DAIA",
   "EXE_FILES" => [
-    "bin/daia",
     "bin/daia"
   ],
   "LICENSE" => "perl",
   "NAME" => "DAIA",
   "PREREQ_PM" => {
-    "CGI" => 0,
     "Carp" => 0,
     "Carp::Clan" => 0,
-    "Data::Dumper" => 0,
     "Data::Validate::URI" => 0,
     "DateTime" => 0,
     "DateTime::Duration" => 0,
     "DateTime::Format::Duration" => 0,
-    "Exporter" => 0,
     "Getopt::Long" => 0,
     "IO::File" => 0,
     "IO::Scalar" => 0,
@@ -47,30 +36,39 @@ my %WriteMakefileArgs = (
     "POSIX" => 0,
     "Pod::Usage" => 0,
     "Scalar::Util" => 0,
-    "XML::SAX" => 0,
-    "XML::Simple" => 0,
-    "base" => 0,
-    "strict" => 0,
-    "warnings" => 0
+    "XML::LibXML::Simple" => 0
   },
-  "VERSION" => "0.421",
+  "TEST_REQUIRES" => {},
+  "VERSION" => "0.43",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
 
-unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
-  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
-  my $pp = $WriteMakefileArgs{PREREQ_PM};
-  for my $mod ( keys %$br ) {
-    if ( exists $pp->{$mod} ) {
-      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
-    }
-    else {
-      $pp->{$mod} = $br->{$mod};
-    }
-  }
+my %FallbackPrereqs = (
+  "Carp" => 0,
+  "Carp::Clan" => 0,
+  "Data::Validate::URI" => 0,
+  "DateTime" => 0,
+  "DateTime::Duration" => 0,
+  "DateTime::Format::Duration" => 0,
+  "Getopt::Long" => 0,
+  "IO::File" => 0,
+  "IO::Scalar" => 0,
+  "JSON" => 0,
+  "LWP::Simple" => 0,
+  "POSIX" => 0,
+  "Pod::Usage" => 0,
+  "Scalar::Util" => 0,
+  "XML::LibXML::Simple" => 0
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  delete $WriteMakefileArgs{TEST_REQUIRES};
+  delete $WriteMakefileArgs{BUILD_REQUIRES};
+  $WriteMakefileArgs{PREREQ_PM} = \%FallbackPrereqs;
 }
 
 delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
